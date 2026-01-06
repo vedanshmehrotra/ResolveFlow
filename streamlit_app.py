@@ -1,10 +1,15 @@
 """
 HOSTEL COMPLAINT TRIAGE SYSTEM - ADMIN DASHBOARD
 =================================================
-Professional admin interface for complaint classification
+Professional admin interface with per-issue routing logic
 
 Author: Vedansh
 Date: December 2025
+
+KEY IMPROVEMENT:
+- Changed from global routing (highest confidence wins)
+- To per-issue routing (each issue evaluated independently)
+- Prevents misrouting of multi-issue complaints
 """
 
 import streamlit as st
@@ -30,219 +35,183 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS - FIXED VERSION
-CUSTOM_CSS = """
-<style>
-    /* Import System Fonts */
-    * {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", 
-                     "Helvetica Neue", Arial, sans-serif;
+# Custom CSS - Admin Dashboard Style
+CUSTOM_CSS = """<style>
+    /* Reset & Base Styles */
+    :root {
+        --bg-color: #f8f9fa;
+        --card-bg: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+        --primary-color: #3b82f6;
+        --success-color: #22c55e;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     }
-    
-    /* FORCE GREY BACKGROUND EVERYWHERE */
-    html, body {
-        background-color: #f5f5f5 !important;
-    }
-    
-    [data-testid="stAppViewContainer"],
-    [data-testid="stApp"],
-    .main,
+
+    /* Global Overrides */
     .stApp {
-        background-color: #f5f5f5 !important;
+        background-color: var(--bg-color);
     }
     
-    /* Page Container */
     .block-container {
-        padding: 2rem 3rem;
-        max-width: 1100px;
-        background-color: transparent !important;
+        padding-top: 3rem;
+        padding-bottom: 3rem;
+        max-width: 900px;
+    }
+
+    h1, h2, h3 {
+        color: var(--text-primary) !important;
+        font-family: 'Inter', system-ui, sans-serif;
     }
     
-    /* Headings - Black Text */
-    h1 {
-        font-size: 1.75rem;
-        font-weight: 600;
-        color: #000000 !important;
-        margin-bottom: 0.75rem;
+    p, label {
+        color: var(--text-secondary) !important;
+    }
+
+    /* Admin Card Components */
+    .admin-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-sm);
     }
     
-    h2 {
-        font-size: 1.125rem;
+    .admin-card-header {
+        font-size: 1.1rem;
         font-weight: 600;
-        color: #000000 !important;
-        margin-top: 2rem;
+        color: var(--text-primary);
         margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
     }
     
-    h3 {
-        font-size: 0.9375rem;
-        font-weight: 600;
-        color: #000000 !important;
-        margin-top: 1.5rem;
-        margin-bottom: 0.75rem;
-    }
-    
-    /* Paragraph Text */
-    p {
-        color: #2a2a2a !important;
-        font-size: 0.9375rem;
-        line-height: 1.6;
-    }
-    
-    /* Text Area */
-    .stTextArea textarea {
-        font-size: 0.9375rem;
-        color: #1a1a1a !important;
-        border: 1px solid #bdbdbd !important;
-        border-radius: 3px;
-        padding: 0.75rem;
-        background-color: #ffffff !important;
-    }
-    
-    .stTextArea textarea:focus {
-        border-color: #4a90e2 !important;
-        box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.1);
-    }
-    
-    /* Radio Buttons */
-    .stRadio > label {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #000000 !important;
-    }
-    
-    .stRadio div[role="radiogroup"] {
+    .admin-row {
         display: flex;
-        gap: 0.75rem;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--bg-color);
     }
     
-    .stRadio div[role="radiogroup"] > label {
-        background-color: #ffffff !important;
-        border: 1px solid #d0d0d0 !important;
-        border-radius: 3px;
-        padding: 0.625rem 1rem;
-        font-size: 0.875rem;
-        color: #2a2a2a !important;
+    .admin-row:last-child {
+        border-bottom: none;
     }
     
-    .stRadio div[role="radiogroup"] > label:hover {
-        background-color: #f5f5f5 !important;
-        border-color: #b0b0b0 !important;
-    }
-    
-    .stRadio div[role="radiogroup"] > label[data-checked="true"] {
-        background-color: #4a90e2 !important;
-        color: #ffffff !important;
-        border-color: #4a90e2 !important;
+    .admin-label {
         font-weight: 500;
+        color: var(--text-secondary);
     }
     
-    /* Button */
+    .admin-value {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    /* Routing Cards */
+    .routing-card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: transform 0.1s ease-in-out;
+    }
+
+    .routing-auto {
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .routing-review {
+        border-left: 4px solid var(--warning-color);
+    }
+
+    .routing-title {
+        font-weight: 700;
+        color: var(--text-primary) !important;
+        font-size: 1rem;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .routing-desc {
+        color: var(--text-secondary) !important;
+        font-size: 0.9rem;
+    }
+    
+    .routing-badge-container {
+        text-align: right;
+        min-width: 120px;
+    }
+
+    /* Badges */
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .badge-high {
+        background-color: #dcfce7;
+        color: #15803d;
+    }
+    
+    .badge-medium {
+        background-color: #fef9c3;
+        color: #a16207;
+    }
+    
+    .badge-low {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    /* Streamlit Component overrides */
+    .stTextArea textarea {
+        background-color: var(--card-bg) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 6px;
+        color: var(--text-primary) !important;
+        caret-color: var(--text-primary) !important;
+    }
+    
+    .stTextInput input {
+        color: var(--text-primary) !important;
+        caret-color: var(--text-primary) !important;
+    }
+    
     .stButton button {
-        background-color: #4a90e2 !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 3px;
-        padding: 0.625rem 1.5rem;
-        font-size: 0.9375rem;
+        background-color: var(--primary-color);
+        color: white;
         font-weight: 500;
-        width: 100%;
+        border-radius: 6px;
+        border: none;
+        transition: background-color 0.2s;
     }
     
     .stButton button:hover {
-        background-color: #357abd !important;
+        background-color: #2563eb;
     }
-    
-    /* Alerts */
-    .stAlert {
-        border-radius: 3px;
-        border-left: 3px solid !important;
-        padding: 0.75rem 1rem;
-        font-size: 0.9375rem;
-    }
-    
-    /* Success Alert */
-    .stSuccess {
-        background-color: #f0f9f4 !important;
-        border-left-color: #48a868 !important;
-        color: #2d6a3e !important;
-    }
-    
-    /* Warning Alert */
-    .stWarning {
-        background-color: #fef9f0 !important;
-        border-left-color: #e8a02a !important;
-        color: #8a5e1a !important;
-    }
-    
-    /* Error Alert */
-    .stError {
-        background-color: #fef2f2 !important;
-        border-left-color: #d93025 !important;
-        color: #8a1e1a !important;
-    }
-    
-    /* Expander */
-    .streamlit-expanderHeader {
-        background-color: #ffffff !important;
-        border: 1px solid #e0e0e0 !important;
-        border-radius: 3px;
-        padding: 0.625rem 0.875rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #404040 !important;
-    }
-    
-    .streamlit-expanderHeader:hover {
-        background-color: #f5f5f5 !important;
-    }
-    
-    .streamlit-expanderContent {
-        border: 1px solid #e0e0e0 !important;
-        border-top: none !important;
-        padding: 0.875rem;
-        background-color: #ffffff !important;
-    }
-    
-    /* Code Blocks */
-    code {
-        font-family: "SF Mono", Monaco, monospace;
-        font-size: 0.8125rem;
-        background-color: #f5f5f5 !important;
-        color: #1a1a1a !important;
-        padding: 0.125rem 0.375rem;
-        border-radius: 2px;
-    }
-    
-    .stCodeBlock {
-        border: 1px solid #e0e0e0 !important;
-        border-radius: 3px;
-        background-color: #ffffff !important;
-    }
-    
-    /* Dividers */
-    hr {
-        margin: 2rem 0;
-        border: none;
-        border-top: 1px solid #d0d0d0;
-    }
-    
-    /* Caption */
-    .stCaption {
-        font-size: 0.8125rem;
-        color: #707070 !important;
-        font-style: italic;
-    }
-    
-    /* Hide Streamlit Branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-</style>
-"""
 
+    /* Metric/Info display tweaks */
+    div[data-testid="stExpander"] {
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background-color: var(--card-bg);
+    }
+</style>"""
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-
 # Download NLTK data
 @st.cache_resource
 def download_nltk_data():
@@ -258,29 +227,28 @@ def download_nltk_data():
             nltk.download('punkt_tab', quiet=True)
 
 download_nltk_data()
-
 # Load models
 @st.cache_resource
 def load_models():
     try:
         with open('models/tfidf_vectorizer.pkl', 'rb') as f:
             tfidf_vectorizer = pickle.load(f)
-        
+
         with open('models/issue_classifier_ml.pkl', 'rb') as f:
             issue_classifier_ml = pickle.load(f)
-        
+
         with open('models/urgency_classifier_ml.pkl', 'rb') as f:
             urgency_classifier_ml = pickle.load(f)
-        
+
         issue_classifier_lstm = load_model('models/issue_classifier_lstm.keras')
         urgency_classifier_lstm = load_model('models/urgency_classifier_lstm.keras')
-        
+
         with open('models/tokenizer_dl.pkl', 'rb') as f:
             tokenizer = pickle.load(f)
-        
+
         with open('data/category_mapping.json', 'r') as f:
             mappings = json.load(f)
-        
+
         return {
             'tfidf': tfidf_vectorizer,
             'issue_ml': issue_classifier_ml,
@@ -294,7 +262,6 @@ def load_models():
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
         st.stop()
-
 def validate_complaint(text):
     if not text or text.strip() == "":
         return False, "error", "Please enter a complaint description"
@@ -321,7 +288,7 @@ def validate_complaint(text):
     
     absurd_patterns = [
         'floor is lava', 'aliens', 'unicorn', 'dragon', 'magic', 'wizard',
-        'flying', 'teleport', 'time travel', 'stealing my socks'
+        'flying', 'teleport', 'time travel', 
     ]
     if any(pattern in text_lower for pattern in absurd_patterns):
         return False, "absurd", "Unrealistic content detected - please describe a real issue"
@@ -344,27 +311,40 @@ def preprocess_text(text):
     return ' '.join(tokens)
 
 def get_keyword_fallbacks(text_lower, categories):
+    """Enhanced keyword fallbacks for missing vocabulary"""
     fallback_issues = np.zeros(len(categories))
     
-    electrical_keywords = ['light', 'lights', 'bulb', 'bulbs', 'lamp', 'lamps', 
-                          'electric', 'electricity', 'power', 'outlet', 'switch',
-                          'ac', 'air conditioning', 'heater', 'heating', 'fan not working',
-                          'circuit', 'fuse', 'wiring']
+    # Electrical keywords - EXPANDED
+    electrical_keywords = [
+        'light', 'lights', 'bulb', 'bulbs', 'lamp', 'lamps', 
+        'electric', 'electricity', 'power', 'outlet', 'switch',
+        'ac', 'air conditioning', 'heater', 'heating', 'cooling',
+        'fan', 'fans', 'ventilation', 'circuit', 'fuse', 'wiring',
+        'flickering', 'giving heat', 'giving off heat', 'not cooling'
+    ]
     if any(kw in text_lower for kw in electrical_keywords):
         if 'electrical_issue' in categories:
             idx = categories.index('electrical_issue')
             fallback_issues[idx] = 0.7
     
-    noise_keywords = ['noisy', 'noise', 'loud', 'neighbor', 'neighbors', 'lobbymate', 
-                     'lobbymates', 'roommate', 'roommates', 'shouting', 'yelling',
-                     'music', 'party', 'disturbing', 'disturbance']
+    # Noise keywords - EXPANDED
+    noise_keywords = [
+        'noisy', 'noise', 'loud', 'neighbor', 'neighbors', 'lobbymate', 
+        'lobbymates', 'roommate', 'roommates', 'shouting', 'yelling',
+        'music', 'party', 'disturbing', 'disturbance', 'too noisy',
+        'making noise', 'sound', 'sounds'
+    ]
     if any(kw in text_lower for kw in noise_keywords):
         if 'noise_issue' in categories:
             idx = categories.index('noise_issue')
             fallback_issues[idx] = 0.7
     
-    cleanliness_keywords = ['mess', 'messy', 'dirty', 'filthy', 'unclean', 'not clean',
-                           'untidy', 'cluttered', 'trash', 'garbage', 'rubbish']
+    # Cleanliness keywords
+    cleanliness_keywords = [
+        'mess', 'messy', 'dirty', 'filthy', 'unclean', 'not clean',
+        'untidy', 'cluttered', 'trash', 'garbage', 'rubbish',
+        'not being cleaned', 'cleaning', 'cleaned'
+    ]
     if any(kw in text_lower for kw in cleanliness_keywords):
         if 'cleanliness_issue' in categories:
             idx = categories.index('cleanliness_issue')
@@ -377,16 +357,29 @@ def predict_ml(complaint_text, models):
     X = models['tfidf'].transform([processed])
     
     issue_proba = models['issue_ml'].predict_proba(X)
+    
     issue_confidences = []
-    for proba in issue_proba:
-        proba_array = np.array(proba)
-        try:
-            if len(proba_array.shape) == 2 and proba_array.shape[1] > 1:
-                issue_confidences.append(float(proba_array[0][1]))
-            else:
-                issue_confidences.append(float(proba_array.flat[0]))
-        except:
-            issue_confidences.append(0.0)
+    
+    # Check if output is a list (standard MultiOutput/OneVsRest behavior)
+    if isinstance(issue_proba, list):
+        for proba in issue_proba:
+            proba_array = np.array(proba)
+            try:
+                if len(proba_array.shape) == 2 and proba_array.shape[1] > 1:
+                    issue_confidences.append(float(proba_array[0][1]))
+                else:
+                    issue_confidences.append(float(proba_array.flat[0]))
+            except:
+                issue_confidences.append(0.0)
+    # Handle case where output is a single array (e.g. ClassifierChain, specialized multilabel)
+    # shape: (n_samples, n_classes) -> we want probas for n_classes
+    elif hasattr(issue_proba, 'shape') or isinstance(issue_proba, np.ndarray):
+        proba_array = np.array(issue_proba)
+        # Assuming proba_array is (1, n_classes) and contains positive class probabilities
+        if len(proba_array.shape) >= 2:
+            issue_confidences = proba_array[0].tolist()
+        else:
+             issue_confidences = proba_array.tolist()
     
     issue_confidences = np.array(issue_confidences)
     
@@ -442,9 +435,70 @@ def predict_lstm(complaint_text, models):
         'processed_text': processed
     }
 
-#==============================================================================
+# ============================================================================
+# PER-ISSUE ROUTING LOGIC (KEY FIX)
+# ============================================================================
+
+def get_per_issue_routing(categories, confidences):
+    """
+    Per-issue routing decisions - CORE FIX
+    
+    Each issue is evaluated independently based on its own confidence.
+    No more "highest wins" - prevents misrouting of multi-issue complaints.
+    
+    Thresholds (raised for safety with synthetic data):
+    - Auto-route: >= 85% (was 80%)
+    - Human review: 65-84% (was 60-80%)
+    - Ignore: < 65% (was <60%)
+    """
+    decisions = []
+    
+    for i, category in enumerate(categories):
+        conf = confidences[i]
+        
+        if conf >= 0.85:
+            # High confidence - auto-create task
+            decisions.append({
+                'category': category,
+                'confidence': conf,
+                'action': 'AUTO-ROUTE',
+                'status': 'auto',
+                'team': get_team_name(category),
+                'description': f'High confidence - auto-create task for {get_team_name(category)}'
+            })
+        elif 0.65 <= conf < 0.85:
+            # Medium confidence - flag for review
+            decisions.append({
+                'category': category,
+                'confidence': conf,
+                'action': 'HUMAN REVIEW',
+                'status': 'review',
+                'team': 'Triage Staff',
+                'description': f'Medium confidence - flag for triage staff to verify'
+            })
+        # Below 65%: implicitly ignored (no decision created)
+    
+    return decisions
+
+def get_team_name(category):
+    """Map issue category to maintenance team"""
+    team_mapping = {
+        'electrical_issue': 'Electrical Team',
+        'internet_issue': 'IT/Network Team',
+        'plumbing_issue': 'Plumbing Team',
+        'furniture_issue': 'Furniture/Maintenance Team',
+        'cleanliness_issue': 'Housekeeping Team',
+        'food_issue': 'Mess Management',
+        'noise_issue': 'Hostel Administration',
+        'billing_issue': 'Accounts Department'
+    }
+    return team_mapping.get(category, 'General Maintenance')
+    
+
+
+# ============================================================================
 # MAIN APP
-#==============================================================================
+# ============================================================================
 
 with st.spinner('Loading models...'):
     models = load_models()
@@ -470,7 +524,7 @@ st.markdown("## Complaint Input")
 complaint_text = st.text_area(
     "Enter maintenance complaint",
     height=150,
-    placeholder="Example: The wifi in my room has been down for two days and I have an exam tomorrow. Please fix this as soon as possible.",
+    placeholder="Example: The lights are flickering in my room and the AC is giving off heat instead of cooling. Also the wifi connection keeps dropping.",
     label_visibility="collapsed"
 )
 
@@ -503,140 +557,134 @@ if st.button("Analyze Complaint", type="primary"):
         st.markdown("---")
         st.markdown("## Classification Results")
         
-        # Get data - ensure arrays are properly converted and handle shape issues
-        issues_array = np.array(results['issues']).flatten()
-        confidences_array = np.array(results['issue_confidences']).flatten()
+        # Get data
+        issues_array = np.array(results['issues'])
+        confidences_array = np.array(results['issue_confidences'])
         predicted_urgency = models['urgency_labels'][results['urgency']]
         urgency_confidence = results['urgency_confidence']
-        max_confidence = max(confidences_array) if len(confidences_array) > 0 else 0.0
         
-        # Collect issue categories - with proper bounds checking
+        # Get urgency confidence badge
+        if urgency_confidence > 0.75:
+            urgency_badge = '<span class="badge badge-high">HIGH CONFIDENCE</span>'
+        elif urgency_confidence > 0.50:
+            urgency_badge = '<span class="badge badge-medium">MEDIUM CONFIDENCE</span>'
+        else:
+            urgency_badge = '<span class="badge badge-low">LOW CONFIDENCE</span>'
+        
+        # Summary Card
         issues_found = []
         for i, category in enumerate(models['categories']):
-            if i < len(issues_array) and int(issues_array[i]) == 1:
+            if i < len(issues_array) and issues_array[i] == 1:
                 issues_found.append(category.replace('_', ' ').title())
         
         issues_text = ", ".join(issues_found) if issues_found else "None detected"
+        st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+        st.markdown(f"""<div class="admin-card">
+<div class="admin-card-header">Overview</div>
+<div class="admin-row">
+<span class="admin-label">Detected Issues</span>
+<span class="admin-value">{issues_text}</span>
+</div>
+<div class="admin-row">
+<span class="admin-label">Urgency Level</span>
+<span class="admin-value">{predicted_urgency.upper()}</span>
+</div>
+<div class="admin-row">
+<span class="admin-label">Urgency Confidence</span>
+{urgency_badge}
+</div>
+</div>""", unsafe_allow_html=True)
         
-        # Determine routing
-        if max_confidence > 0.80:
-            routing_action = "AUTO-ROUTE"
-            routing_bg = "#f0f9f4"
-            routing_border = "#48a868"
-            routing_text = "#2d6a3e"
-            routing_desc = "High confidence — route to maintenance automatically"
-        elif max_confidence > 0.60:
-            routing_action = "HUMAN REVIEW"
-            routing_bg = "#fef9f0"
-            routing_border = "#e8a02a"
-            routing_text = "#8a5e1a"
-            routing_desc = "Medium confidence — flag for staff verification"
-        else:
-            routing_action = "MANUAL ASSIGNMENT"
-            routing_bg = "#fef2f2"
-            routing_border = "#d93025"
-            routing_text = "#8a1e1a"
-            routing_desc = "Low confidence — requires full human assessment"
-        
-        # Get confidence label
-        if urgency_confidence > 0.75:
-            conf_label = "High"
-            conf_color = "#2e7d32"
-            conf_bg = "#e8f5e9"
-        elif urgency_confidence > 0.50:
-            conf_label = "Medium"
-            conf_color = "#e65100"
-            conf_bg = "#fff3e0"
-        else:
-            conf_label = "Low"
-            conf_color = "#c62828"
-            conf_bg = "#ffebee"
-        
-        # Use Streamlit containers and columns instead of raw HTML
-        with st.container():
-            st.markdown("### Decision Summary")
-            
-            # Issue Type
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.markdown('<div style="color:#6b7280; font-size:0.875rem;">Issue Type</div>', unsafe_allow_html=True)
-            with col2:
-                st.markdown(f'<div style="font-weight:600; color:#000000; font-size:0.9375rem;">{issues_text}</div>', unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # Urgency
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.markdown('<div style="color:#6b7280; font-size:0.875rem;">Urgency</div>', unsafe_allow_html=True)
-            with col2:
-                st.markdown(f'<div style="font-weight:600; color:#000000; font-size:0.9375rem; text-transform:uppercase;">{predicted_urgency}</div>', unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # Confidence
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.markdown('<div style="color:#6b7280; font-size:0.875rem;">Confidence</div>', unsafe_allow_html=True)
-            with col2:
-                st.markdown(f'<span style="display:inline-block; padding:0.25rem 0.75rem; border-radius:3px; font-size:0.75rem; font-weight:600; background:{conf_bg}; color:{conf_color};">{conf_label.upper()} CONFIDENCE</span>', unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # Routing Decision
+    # Per-Issue Routing Decisions
+    st.markdown("### Routing Decisions")
+    st.caption("Each issue is evaluated independently — prevents misrouting of multi-issue complaints")
+
+    routing_decisions = get_per_issue_routing(models['categories'], confidences_array)
+
+    if not routing_decisions:
+        st.warning("No issues detected with sufficient confidence (≥65%). Full manual review required.")
+    else:
+        for decision in routing_decisions:
+            status_class = f"routing-{decision['status']}"
+
+            conf_badge = (
+                '<span class="badge badge-high">HIGH</span>'
+                if decision['confidence'] >= 0.85
+                else '<span class="badge badge-medium">MEDIUM</span>'
+            )
+
             st.markdown(f"""
-            <div style="padding:1rem; background:{routing_bg}; border:1.5px solid {routing_border}; border-radius:4px; margin-top:0.5rem;">
-                <div style="font-weight:600; font-size:0.9375rem; color:{routing_text}; margin-bottom:0.25rem;">{routing_action}</div>
-                <div style="font-size:0.875rem; color:{routing_text}; margin-bottom:0.5rem;">{routing_desc}</div>
-                <div style="font-size:0.8125rem; color:{routing_text}; opacity:0.8;">Classification confidence: {max_confidence:.0%}</div>
+            <div class="routing-card {status_class}">
+                <div>
+                    <div class="routing-title">
+                        {decision['category'].replace('_', ' ').title()}
+                    </div>
+                    <div class="routing-desc">
+                        {decision['description']}
+                    </div>
+                    <div style="font-size:0.8125rem; color:#2a2a2a; margin-top:0.375rem;">
+                        Assigned to: <strong>{decision['team']}</strong>
+                    </div>
+                </div>
+                <div class="routing-badge-container">
+                    <div style="font-weight:600; font-size:0.875rem;">
+                        {decision['action']}
+                    </div>
+                    {conf_badge}
+                    <div style="font-size:0.75rem; color:#2a2a2a; margin-top:0.25rem;">
+                        {decision['confidence']:.0%}
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
+
         
-        # Issue Categories List - using Streamlit columns for better control
-        if issues_found:
-            st.markdown("### Predicted Issue Categories")
-            for i, category in enumerate(models['categories']):
-                if i < len(issues_array) and int(issues_array[i]) == 1:
-                    conf = float(confidences_array[i])
-                    conf_label = "High" if conf > 0.75 else ("Medium" if conf > 0.50 else "Low")
+        # All Detected Issues (for reference)
+        st.markdown("### All Detected Issues")
+        st.caption("Full classification results with confidence scores")
+        
+        for i, category in enumerate(models['categories']):
+            if i < len(confidences_array):
+                conf = float(confidences_array[i])
+                
+                # Show all detected issues (above detection threshold 0.3)
+                # This aligns with the "Overview" card
+                if conf >= 0.30:
+                    if conf >= 0.85:
+                        conf_label = "High" 
+                        conf_badge_class = "badge-high"
+                    elif conf >= 0.65:
+                        conf_label = "Medium"
+                        conf_badge_class = "badge-medium"
+                    else:
+                        conf_label = "Low (Ignored)"
+                        conf_badge_class = "badge-low"
                     
-                    # Use columns instead of HTML for reliability
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.markdown(f"**{category.replace('_', ' ').title()}**")
-                    with col2:
-                        st.markdown(f'<div style="text-align:right; color:#000000; font-weight:600; font-size:0.875rem;">{conf_label} ({conf:.0%})</div>', unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div class="admin-card" style="padding: 0.75rem 1rem; margin: 0.5rem 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600; color: #000000;">{category.replace('_', ' ').title()}</span>
+                            <div>
+                                <span class="badge {conf_badge_class}">{conf_label}</span>
+                                <span style="font-size: 0.8125rem; color: #2a2a2a; margin-left: 0.5rem;">{conf:.0%}</span>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
         
-        st.caption("Note: Urgency is predicted based on linguistic patterns, not objective severity")
+        st.caption("Note: Issues with confidence <65% are technically detected but ignored for routing to prevent false positives.")
         
-        # Technical Details - Hidden by default
-        with st.expander("Technical details (for review only)"):
-            st.markdown("""
-            <ul style="margin:0.5rem 0; padding-left:1.5rem;">
-                <li>Input validation (length, spam, absurdity checks)</li>
-                <li>Text normalization (lowercase, special character removal)</li>
-                <li>Tokenization: """ + str(len(results['processed_text'].split())) + """ tokens extracted</li>
-                <li>Lemmatization and stopword filtering</li>
-                <li>Feature extraction: """ + ('TF-IDF vectorization' if 'Machine Learning' in selected_model else 'Word embeddings') + """</li>
-                <li>Classification</li>
-                <li>Confidence scoring and routing decision</li>
-            </ul>
-            """, unsafe_allow_html=True)
+        # Technical Details
+        with st.expander("View technical details"):
+            st.markdown("**Processing Pipeline**")
+            st.code(f"""1. Input validation (length, spam, absurdity checks)
+2. Text normalization (lowercase, special character removal)
+3. Tokenization: {len(results['processed_text'].split())} tokens extracted
+4. Lemmatization and stopword filtering
+5. Feature extraction: {'TF-IDF vectorization' if 'Machine Learning' in selected_model else 'Word embeddings'}
+6. Multi-label classification
+7. Per-issue routing decisions""")
             
             st.markdown("**Processed Text**")
             st.code(results['processed_text'])
-            
-            st.markdown("**Confidence Thresholds**")
-            st.markdown("""
-            <ul style="margin:0.5rem 0; padding-left:1.5rem;">
-                <li>Auto-route: >80% confidence</li>
-                <li>Human review: 60-80% confidence</li>
-                <li>Manual assignment: <60% confidence</li>
-            </ul>
-            """, unsafe_allow_html=True)
-    else:
-        st.warning("Please enter a complaint description to analyze")
-
-# Footer
-st.markdown("---")
-st.caption("Classification Model: ML (Logistic Regression + Naive Bayes) | DL (LSTM) • Trained on synthetic data • Linguistic urgency prediction • Confidence-based routing")
