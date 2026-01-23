@@ -45,19 +45,15 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <h1 class="text-xl font-bold text-gray-800">🛠️ Admin Triage</h1>
+                    <h1 class="text-xl font-bold text-gray-800">🛠️ Admin Audit Log</h1>
                     <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="#" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">Inbox</a>
-                        <a href="/"
-                            class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Post
-                            Complaint</a>
+                        <a href="#" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium">Audit</a>
+                        <a href="/decision-queue"
+                            class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Decision
+                            Queue</a>
+                        <a href="/assignments"
+                            class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Operations</a>
                     </div>
-                </div>
-                <div class="flex items-center">
-                    <span class="text-sm text-gray-500 mr-2">Admin User</span>
-                    <div
-                        class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold">
-                        A</div>
                 </div>
             </div>
         </div>
@@ -66,7 +62,7 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="mb-6 flex justify-between items-center">
-            <h2 class="text-2xl font-bold text-gray-900">Complaint Inbox</h2>
+            <h2 class="text-2xl font-bold text-gray-900">Complaint History</h2>
             <button onclick="window.location.reload()"
                 class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
                 Refresh
@@ -83,16 +79,13 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Student</th>
                             <th
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                                Content</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Source</th>
+                            <th
                                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">
-                                Complaint & Issues</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Urgency</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Routing</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions</th>
+                                Assignments (Work Orders)</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -101,87 +94,55 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">#{{ c.id }}</div>
                                 <div class="text-xs text-gray-500">{{ c.timestamp.split(' ')[0] }}</div>
-                                <div class="text-xs text-gray-400">{{ c.timestamp.split(' ')[1] }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">{{ c.student_name }}</div>
-                                <div class="text-xs text-gray-500">{{ c.student_id or 'No ID' }}</div>
+                                <div class="text-xs text-gen-mono mt-1">Rm: {{ c.room_number or '--' }}</div>
                             </td>
                             <td class="px-6 py-4">
-                                {% set tooltip_parts = [] %}
-                                {% for cat, score in c.confidence_scores.items() %}
-                                {% if score > 0.1 %}
-                                {% set _ = tooltip_parts.append(cat.replace('_', ' ').title() + ': ' +
-                                (score*100)|round|int|string + '%') %}
-                                {% endif %}
-                                {% endfor %}
-                                <div class="text-sm text-gray-900 line-clamp-2 mb-1 cursor-help"
-                                    title="Confidence Scores:&#10;{{ tooltip_parts|sort|join('&#10;') }}">{{
-                                    c.complaint_text }}</div>
+                                <div class="text-sm text-gray-900 line-clamp-2 mb-1">{{ c.complaint_text }}</div>
                                 <div class="flex flex-wrap gap-1">
-                                    {% for issue in c.predicted_issues %}
+                                    {% for issue in c.corrected_issues or c.predicted_issues %}
                                     <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border.border-gray-200"
-                                        title="{{ (c.confidence_scores.get(issue, 0)*100)|round|int }}%">
+                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border.border-gray-200">
                                         {{ issue.replace('_', ' ').title() }}
                                     </span>
-                                    {% else %}
-                                    <span class="text-xs text-gray-400 italic">None detected</span>
                                     {% endfor %}
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm uppercase font-semibold urgency-{{ c.predicted_urgency }}">
-                                    {{ c.predicted_urgency }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-bold text-gray-900">{{ c.routed_team }}</div>
-                                <div class="text-xs 
-                                    {% if c.routing_decision == 'AUTO-ROUTE' %} text-green-600
-                                    {% elif c.routing_decision == 'HUMAN REVIEW' %} text-yellow-600
-                                    {% else %} text-gray-500 {% endif %} font-medium">
-                                    {{ c.routing_decision }}
-                                </div>
-                                <div class="text-[10px] text-gray-400 mt-1">Model: {{ c.model_type }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full status-{{ c.status.lower().replace('_', '') }}">
-                                    {{ c.status.replace('_', ' ') }}
-                                </span>
-                                {% if c.final_status_time %}
-                                <div class="text-[10px] text-gray-400 mt-1" title="Last Updated">
-                                    {{ c.final_status_time.split(' ')[0] }}
-                                </div>
+                                <div class="text-xs font-bold text-gray-600">{{ c.assignment_source }}</div>
+                                <div class="text-[10px] text-gray-400">{{ c.routing_decision }}</div>
+                                {% if c.review_status == 'OVERRIDDEN' %}
+                                <div class="text-[10px] text-orange-600 font-bold mt-1">Overridden</div>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-900">
-                                <div class="line-clamp-3">{{ c.admin_notes or 'No notes' }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex flex-col space-y-2">
-                                    <select id="status-{{ c.id }}"
-                                        class="text-xs border-gray-300 rounded shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                                        <option value="SENT" {% if c.status=='SENT' %}selected{% endif %}>Sent</option>
-                                        <option value="IN_PROGRESS" {% if c.status=='IN_PROGRESS' %}selected{% endif %}>
-                                            In Progress</option>
-                                        <option value="RESOLVED" {% if c.status=='RESOLVED' %}selected{% endif %}>
-                                            Resolved</option>
-                                    </select>
-                                    <input type="text" id="notes-{{ c.id }}" value="{{ c.admin_notes or '' }}"
-                                        placeholder="Add notes..."
-                                        class="text-xs border-gray-300 rounded shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                                    <button onclick="saveTicket({{ c.id }})"
-                                        class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition">Save</button>
+                            <td class="px-6 py-4">
+                                <div class="space-y-2">
+                                    {% set assignments = assignments_map.get(c.id, []) %}
+                                    {% for a in assignments %}
+                                    <div
+                                        class="flex items-center justify-between text-xs border border-gray-100 rounded p-1.5 bg-gray-50">
+                                        <div class="font-medium text-gray-700">{{ a.team }}</div>
+                                        <div class="flex items-center space-x-2">
+                                            <span
+                                                class="px-1.5 rounded-full 
+                                                {% if a.status == 'SENT' %}bg-blue-100 text-blue-800
+                                                {% elif a.status == 'IN_PROGRESS' %}bg-yellow-100 text-yellow-800
+                                                {% elif a.status == 'RESOLVED' %}bg-green-100 text-green-800{% endif %}">
+                                                {{ a.status }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-xs text-gray-400 italic">No assignments generated</span>
+                                    {% endfor %}
                                 </div>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center text-gray-500">
-                                No complaints found. Inbox is empty.
-                            </td>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">No complaints found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -191,45 +152,7 @@
     </main>
 
     <script>
-        async function saveTicket(id) {
-            const statusElem = document.getElementById(`status-${id}`);
-            const notesElem = document.getElementById(`notes-${id}`);
-
-            const newStatus = statusElem.value;
-            const notes = notesElem.value;
-
-            // Add loading state
-            const btn = event.target;
-            const originalText = btn.innerText;
-            btn.innerText = '...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch('/api/update_status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: id,
-                        status: newStatus,
-                        notes: notes
-                    })
-                });
-
-                if (response.ok) {
-                    // Optional: show toast instead of reload
-                    window.location.reload();
-                } else {
-                    alert('Failed to update ticket');
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Connection error');
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        }
+        // Read-only view, no scripts needed for updates
     </script>
 </body>
 

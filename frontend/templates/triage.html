@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triage Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-6">
+
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Ticket Review #{{ c.id }}</h1>
+            <a href="/admin" class="text-sm text-gray-600 hover:text-gray-900">← Back to Inbox</a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- LEFT: Read Only Context -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">📋 Student Complaint</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <span class="block text-xs font-medium text-gray-500 uppercase">Student</span>
+                        <div class="text-gray-900 font-medium">{{ c.student_name }} <span
+                                class="text-gray-400 font-normal">({{ c.student_id }})</span></div>
+                    </div>
+                    <div>
+                        <span class="block text-xs font-medium text-gray-500 uppercase">Room</span>
+                        <div class="text-gray-900 font-medium">{{ c.room_number or 'N/A' }}</div>
+                    </div>
+                    <div>
+                        <span class="block text-xs font-medium text-gray-500 uppercase">Description</span>
+                        <div
+                            class="p-3 bg-gray-50 rounded border border-gray-200 text-gray-700 text-sm whitespace-pre-wrap">
+                            {{ c.complaint_text }}</div>
+                    </div>
+
+                    <div class="pt-4 border-t">
+                        <h3 class="text-sm font-bold text-gray-800 mb-2">🤖 AI Analysis</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="block text-xs font-medium text-gray-500">Detected Issues</span>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    {% for issue in c.predicted_issues %}
+                                    <span class="px-2 py-0.5 rounded text-xs bg-gray-100 border border-gray-200">
+                                        {{ issue.replace('_', ' ').title() }}
+                                        <span class="text-gray-400 text-[10px] ml-1">{{ (c.confidence_scores.get(issue,
+                                            0)*100)|int }}%</span>
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-medium text-gray-500">Routing Decision</span>
+                                <div class="text-sm text-gray-900">{{ c.routing_decision }}</div>
+                                <div class="text-xs text-gray-500">Source: {{ c.assignment_source }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Triage Actions -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">🔧 Correction & Override</h2>
+
+                <div class="space-y-6">
+                    <!-- Urgency -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Correct Urgency</label>
+                        <select id="urgency"
+                            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            {% set current_urgency = c.corrected_urgency or c.predicted_urgency %}
+                            <option value="low" {% if current_urgency=='low' %}selected{% endif %}>Low</option>
+                            <option value="medium" {% if current_urgency=='medium' %}selected{% endif %}>Medium</option>
+                            <option value="high" {% if current_urgency=='high' %}selected{% endif %}>High</option>
+                        </select>
+                    </div>
+
+                    <!-- Issues (Multi-select simulation) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Correct Issues (Select all that
+                            apply)</label>
+                        <div class="grid grid-cols-2 gap-2" id="issues-container">
+                            <!-- JS will populate checkboxes -->
+                        </div>
+                    </div>
+
+                    <!-- Teams -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Assign Teams (Hold Ctrl/Cmd to
+                            select multiple)</label>
+                        <select id="teams" multiple
+                            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 min-h-[160px]">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Review Notes</label>
+                        <textarea id="notes" rows="3"
+                            class="w-full border-gray-300 rounded-md shadow-sm">{{ c.review_notes or '' }}</textarea>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="pt-4 flex gap-4">
+                        <button onclick="submitOverride()"
+                            class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-medium shadow-sm transition">
+                            Confirm & Assign
+                        </button>
+                    </div>
+
+                    {% if c.review_status == 'OVERRIDDEN' %}
+                    <div class="mt-4 p-3 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200">
+                        ⚠ Overridden on {{ c.review_timestamp }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Config
+        const ALL_CATEGORIES = [
+            'electrical_issue', 'internet_issue', 'plumbing_issue',
+            'furniture_issue', 'cleanliness_issue', 'food_issue',
+            'noise_issue', 'billing_issue', 'other_issue'
+        ];
+
+        const ALL_TEAMS = [
+            "Electrical Team", "IT/Network Team", "Plumbing Team",
+            "Furniture/Maintenance Team", "Housekeeping Team",
+            "Mess Management", "Hostel Administration",
+            "Accounts Department", "General Maintenance"
+        ];
+
+        // Pass server data to JS safely
+        const currentIssues = {{ (c.corrected_issues or c.predicted_issues) | tojson }};
+        const currentTeams = {{ (c.corrected_teams or[c.routed_team]) | tojson }}; // Handle single string or list
+        const complaintId = {{ c.id }};
+
+        // Render Issue Checkboxes
+        const issueContainer = document.getElementById('issues-container');
+        ALL_CATEGORIES.forEach(cat => {
+            const isChecked = currentIssues.includes(cat);
+            const label = document.createElement('label');
+            label.className = `flex items-center space-x-2 p-2 rounded border ${isChecked ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'} cursor-pointer hover:bg-gray-100 transition`;
+            label.innerHTML = `
+                <input type="checkbox" value="${cat}" ${isChecked ? 'checked' : ''} class="text-blue-600 rounded focus:ring-blue-500">
+                <span class="text-xs font-medium text-gray-700">${cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+            `;
+            // Add click listener to toggle style
+            label.querySelector('input').addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    label.classList.add('bg-blue-50', 'border-blue-200');
+                    label.classList.remove('bg-gray-50', 'border-gray-200');
+                } else {
+                    label.classList.remove('bg-blue-50', 'border-blue-200');
+                    label.classList.add('bg-gray-50', 'border-gray-200');
+                }
+            });
+            issueContainer.appendChild(label);
+        });
+
+        // Populate Teams
+        const teamSelect = document.getElementById('teams');
+        ALL_TEAMS.forEach(team => {
+            const option = document.createElement('option');
+            option.value = team;
+            option.text = team;
+            if (currentTeams.includes(team)) {
+                option.selected = true;
+            }
+            teamSelect.appendChild(option);
+        });
+
+        async function submitOverride() {
+            // Gather Data
+            const urgency = document.getElementById('urgency').value;
+            const notes = document.getElementById('notes').value;
+
+            const selectedIssues = Array.from(document.querySelectorAll('#issues-container input:checked')).map(cb => cb.value);
+
+            // Get selected teams from select multiple
+            const teamSelect = document.getElementById('teams');
+            const selectedTeams = Array.from(teamSelect.selectedOptions).map(o => o.value);
+
+            if (selectedTeams.length === 0) {
+                alert("Please select at least one team.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/triage/override', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: complaintId,
+                        corrected_issues: selectedIssues,
+                        corrected_urgency: urgency,
+                        corrected_teams: selectedTeams,
+                        review_notes: notes
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Override Saved Successfully');
+                    window.location.href = '/assignments';
+                } else {
+                    const d = await response.json();
+                    alert('Error: ' + d.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Connection Error');
+            }
+        }
+    </script>
+</body>
+
+</html>

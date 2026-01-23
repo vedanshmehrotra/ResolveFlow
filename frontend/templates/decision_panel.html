@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Triage Decision Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-gray-800">🤔 Decision Queue</span>
+                    <div class="ml-10 flex space-x-4">
+                        <a href="/assignments"
+                            class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Operations</a>
+                        <a href="/admin"
+                            class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Audit</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for c in complaints %}
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden flex flex-col">
+                <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-mono text-gray-500">#{{ c.id }}</span>
+                        <div class="font-bold text-gray-900">{{ c.student_name }}</div>
+                        <div class="text-xs text-gray-500">Room: {{ c.room_number or '--' }}</div>
+                        <span
+                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
+                            Manual Review Required
+                        </span>
+                    </div>
+                    <span class="px-2 py-1 rounded text-xs font-bold uppercase
+                        {% if c.predicted_urgency == 'high' %}bg-red-100 text-red-800
+                        {% elif c.predicted_urgency == 'medium' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-green-100 text-green-800{% endif %}">
+                        {{ c.predicted_urgency }}
+                    </span>
+                </div>
+
+                <div class="p-4 flex-grow">
+                    <p class="text-sm text-gray-700 mb-4 whitespace-pre-wrap">{{ c.complaint_text }}</p>
+
+                    <div class="space-y-2">
+                        <div class="text-xs font-semibold text-gray-500 uppercase">Analysis</div>
+                        {% for issue, score in c.confidence_scores.items() %}
+                        {% if score > 0.1 %}
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-700">{{ issue.replace('_', ' ').title() }}</span>
+                            <div class="flex items-center">
+                                <span class="text-xs text-gray-500 mr-2">{{ (score*100)|int }}%</span>
+                                <div class="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full {% if score>=0.85 %}bg-green-500{% elif score>=0.65 %}bg-yellow-500{% else %}bg-gray-400{% endif %}"
+                                        style="width: {{ score*100 }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="p-4 border-t bg-gray-50">
+                    <a href="/triage?id={{ c.id }}"
+                        class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded-md text-sm font-medium transition">
+                        Review & Assign
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center py-12 text-gray-500">
+                <p class="text-lg">Response queue is empty! Great job. 🎉</p>
+            </div>
+            {% endfor %}
+        </div>
+
+    </main>
+</body>
+
+</html>
