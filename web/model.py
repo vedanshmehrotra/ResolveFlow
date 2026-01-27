@@ -176,15 +176,29 @@ def get_team_name(category: str) -> str:
     """Map category to team"""
     team_mapping = {
         'electrical_issue': 'Electrical Team',
-        'internet_issue': 'IT/Network Team',
+        'internet_issue': 'IT / Network Team',
         'plumbing_issue': 'Plumbing Team',
-        'furniture_issue': 'Furniture/Maintenance Team',
+        'furniture_issue': 'Housekeeping Team',
         'cleanliness_issue': 'Housekeeping Team',
         'food_issue': 'Mess Management',
         'noise_issue': 'Hostel Administration',
-        'billing_issue': 'Accounts Department'
+        'billing_issue': 'Accounts Department',
+        'other_issue': 'Hostel Administration'
     }
-    return team_mapping.get(category, 'General Maintenance')
+
+    return team_mapping.get(category, 'Hostel Administration')
+
+def get_all_teams() -> List[str]:
+    """Return list of all unique teams"""
+    return [
+        'Electrical Team',
+        'Plumbing Team', 
+        'IT / Network Team',
+        'Housekeeping Team',
+        'Mess Management',
+        'Hostel Administration',
+        'Accounts Department'
+    ]
 
 def predict_ml(text: str, models: Dict) -> Dict:
     """Run prediction using ML (TF-IDF + LR/NB) models"""

@@ -142,16 +142,22 @@ def get_assignments(team_filter: Optional[str] = None) -> List[Dict[str, Any]]:
             results.append(dict(row))
     return results
 
+def get_active_teams() -> List[str]:
+    """Get list of teams that have active assignments"""
+    query = "SELECT DISTINCT team FROM assignments ORDER BY team ASC"
+    with get_db_connection() as conn:
+        rows = conn.execute(query).fetchall()
+        return [row['team'] for row in rows if row['team']]
+
 def get_decision_queue() -> List[Dict[str, Any]]:
     """
-    Get complaints that need human review.
-    Rule: Exists an issue where confidence < 0.85 AND no assignment exists for that issue's team.
+    Get individual issues that need human review.
+    Rule: Issue confidence between 0.65 and 0.84 AND no assignment exists.
     """
     from model import get_team_name
     
-    # 1. Get potential candidates (all non-finalized or explicitly pending)
-    # We can start with all PENDING.
-    query = "SELECT * FROM complaints WHERE review_status = 'PENDING' ORDER BY timestamp DESC"
+    # 1. Get detailed complaints
+    query = "SELECT * FROM complaints WHERE status != 'RESOLVED' ORDER BY timestamp DESC"
     
     candidates = []
     with get_db_connection() as conn:
@@ -161,7 +167,6 @@ def get_decision_queue() -> List[Dict[str, Any]]:
              
     final_queue = []
     
-    # 2. Filter in Python for the specific logic
     for c in candidates:
         try: 
             issues = json.loads(c['predicted_issues'])
@@ -170,44 +175,56 @@ def get_decision_queue() -> List[Dict[str, Any]]:
             issues = []
             scores = {}
             
-        # Get existing assignments for this complaint
+        # Get existing assignments to filter out handled issues
+        # Check if an assignment exists for this TEAM (proxy for issue)
         existing_assignments = get_assignments_for_complaint(c['id'])
         assigned_teams = {a['team'] for a in existing_assignments}
         
-        needs_review = False
-        
-        # Check rule: Exists issue < 0.85 AND not assigned
-        # Actually, user said: "A complaint appears in queue if... Exists issue where confidence < 85 AND...".
-        # This implies issues >= 85 should rely on the auto-assignment logic.
-        # But if auto-assignment FAILED for some reason, we might want it here too? 
-        # User rule check: "If plumbing=90 (Assigned) and Cleanliness=80 (Unassigned) -> Appear in Queue".
-        # "After manual assignment -> Complaint disappears". 
+        # Check ignored issues from admin_notes/review_notes
+        ignored_notes = (c.get('admin_notes') or '') + (c.get('review_notes') or '')
         
         if not issues:
-             # Fallback: if no issues detected but pending, show it.
-             needs_review = True
+             # Fallback: if no issues detected but status is pending/sent, maybe show it?
+             # For multi-issue logic, we rely on detected issues. If none, maybe manual review of text needed.
+             # Only show if no assignments at all.
+             if not existing_assignments and c['status'] == 'SENT':
+                 item = c.copy()
+                 item['review_issue'] = "Unclassified"
+                 item['review_confidence'] = 0.0
+                 item['suggested_team'] = "Hostel Administration"
+                 final_queue.append(item)
         
         for issue in issues:
             conf = scores.get(issue, 0)
             team = get_team_name(issue)
             
-            # If confidence is low (<0.85) AND not assigned, show it.
-            if conf < 0.85 and team not in assigned_teams:
+            # CHECK IGNORED STATUS based on text log (Simple persistence without schema change)
+            if f"IGNORED_ISSUE: {issue}" in ignored_notes:
+                continue
+
+            # LOGIC: 
+            # If >= 0.85 -> Should have been auto-assigned. If not assigned, show in queue?
+            # User Rule: "Confidence 65%-84% -> Queue". 
+            # If < 0.65 -> Ignore.
+            
+            # We strictly follow the Review Range or if High Conf failed to assign.
+            needs_review = False
+            
+            if 0.65 <= conf < 0.85:
                 needs_review = True
-                break
+            elif conf >= 0.85:
+                 # Should be auto-assigned. If not, put in queue as fallback.
+                 needs_review = True
             
-            # What if >= 0.85 and failed to assign? 
-            # The prompt says "Assignments are system of record". 
-            # If >= 0.85, app logic SHOULD have assigned it. 
-            # If it didn't, it might be weird. But strict rule is:
-            # "Exists at least one issue where conf < 85 AND not assigned". 
-            # So we stick to that.
-            
-        if needs_review:
-            # Update c with parsed values for the template
-            c['predicted_issues'] = issues
-            c['confidence_scores'] = scores
-            final_queue.append(c)
+            if needs_review and team not in assigned_teams:
+                # Create a specific Queue Item for this issue
+                item = c.copy()
+                item['review_issue'] = issue
+                item['review_confidence'] = conf
+                item['suggested_team'] = team
+                # Calculate urgency based on strictly this issue? 
+                # For now keep ticket urgency but maybe we can refine later.
+                final_queue.append(item)
             
     print("Decision queue count:", len(final_queue))
     return final_queue
@@ -392,7 +409,31 @@ def override_complaint_routing(complaint_id: int, data: Dict[str, Any]) -> bool:
         conn.commit()
         return cursor.rowcount > 0
 
+def get_dashboard_stats() -> Dict[str, int]:
+    """Get dashboard statistics from database"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Total complaints
+        total = cursor.execute("SELECT COUNT(*) FROM complaints").fetchone()[0]
+        
+        # Auto-routed = complaints that have at least one auto-assigned assignment
+        auto_routed = cursor.execute("""
+            SELECT COUNT(DISTINCT complaint_id) FROM assignments 
+            WHERE confidence >= 0.85
+        """).fetchone()[0]
+        
+        # Pending review = decision queue count (issues between 0.65 and 0.85 not yet resolved)
+        pending = len(get_decision_queue())
+        
+        return {
+            'total': total,
+            'auto_routed': auto_routed,
+            'pending_review': pending
+        }
+
 # Initialize DB on import if it doesn't exist
 if __name__ == "__main__":
     init_db()
     print("Database initialized.")
+

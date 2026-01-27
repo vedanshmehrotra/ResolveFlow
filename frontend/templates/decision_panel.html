@@ -13,84 +13,132 @@
     </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-900 text-gray-100 min-h-screen font-inter flex flex-col">
 
-    <nav class="bg-white border-b border-gray-200">
+    <!-- Navbar -->
+    <nav class="bg-gray-800 border-b border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <span class="text-xl font-bold text-gray-800">🤔 Decision Queue</span>
+                    <span class="text-xl font-bold text-gray-100 flex items-center gap-2">
+                        <span>Decision Queue</span> <span class="text-gray-500 text-sm font-medium">| Admin
+                            Review</span>
+                    </span>
                     <div class="ml-10 flex space-x-4">
                         <a href="/assignments"
-                            class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Operations</a>
+                            class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Operations</a>
                         <a href="/admin"
-                            class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Audit</a>
+                            class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Audit</a>
                     </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <form action="/decision-queue" method="GET" class="flex items-center">
+                        <div class="bg-gray-700 rounded-md p-1 flex items-center border border-gray-600">
+                            <span class="text-xs text-gray-400 px-2 uppercase font-bold">Filter:</span>
+                            <select name="priority" onchange="this.form.submit()"
+                                class="bg-transparent text-sm text-gray-200 focus:outline-none cursor-pointer pr-2">
+                                <option value="" class="bg-gray-800">All Priorities</option>
+                                <option value="high" class="bg-gray-800" {% if active_priority=='high' %}selected{%
+                                    endif %}>High</option>
+                                <option value="medium" class="bg-gray-800" {% if active_priority=='medium' %}selected{%
+                                    endif %}>Medium</option>
+                                <option value="low" class="bg-gray-800" {% if active_priority=='low' %}selected{% endif
+                                    %}>Low</option>
+                            </select>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="space-y-4">
             {% for c in complaints %}
-            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-start">
-                    <div>
-                        <span class="text-xs font-mono text-gray-500">#{{ c.id }}</span>
-                        <div class="font-bold text-gray-900">{{ c.student_name }}</div>
-                        <div class="text-xs text-gray-500">Room: {{ c.room_number or '--' }}</div>
-                        <span
-                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
-                            Manual Review Required
-                        </span>
-                    </div>
-                    <span class="px-2 py-1 rounded text-xs font-bold uppercase
-                        {% if c.predicted_urgency == 'high' %}bg-red-100 text-red-800
-                        {% elif c.predicted_urgency == 'medium' %}bg-yellow-100 text-yellow-800
-                        {% else %}bg-green-100 text-green-800{% endif %}">
-                        {{ c.predicted_urgency }}
-                    </span>
+            <!-- Card -->
+            <div
+                class="group relative bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700 hover:border-gray-600 transition-all">
+                <!-- Priority Strip -->
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 
+                    {% if c.predicted_urgency == 'high' %}bg-red-500
+                    {% elif c.predicted_urgency == 'medium' %}bg-yellow-500
+                    {% else %}bg-green-500{% endif %}">
                 </div>
 
-                <div class="p-4 flex-grow">
-                    <p class="text-sm text-gray-700 mb-4 whitespace-pre-wrap">{{ c.complaint_text }}</p>
-
-                    <div class="space-y-2">
-                        <div class="text-xs font-semibold text-gray-500 uppercase">Analysis</div>
-                        {% for issue, score in c.confidence_scores.items() %}
-                        {% if score > 0.1 %}
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-700">{{ issue.replace('_', ' ').title() }}</span>
-                            <div class="flex items-center">
-                                <span class="text-xs text-gray-500 mr-2">{{ (score*100)|int }}%</span>
-                                <div class="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                    <div class="h-full {% if score>=0.85 %}bg-green-500{% elif score>=0.65 %}bg-yellow-500{% else %}bg-gray-400{% endif %}"
-                                        style="width: {{ score*100 }}%"></div>
-                                </div>
-                            </div>
+                <div class="p-5 pl-7">
+                    <!-- Header -->
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-baseline space-x-3">
+                            <span class="text-sm font-mono text-gray-500 font-bold">Req #{{ c.id }}</span>
+                            <h3 class="text-base font-bold text-gray-100">{{ c.student_name }}</h3>
                         </div>
-                        {% endif %}
-                        {% endfor %}
+                        <span class="text-sm text-gray-400 font-medium">Room {{ c.room_number or '--' }}</span>
                     </div>
-                </div>
 
-                <div class="p-4 border-t bg-gray-50">
-                    <a href="/triage?id={{ c.id }}"
-                        class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded-md text-sm font-medium transition">
-                        Review & Assign
-                    </a>
+                    <!-- Body -->
+                    <div class="mb-4">
+                        <p class="text-gray-300 text-sm line-clamp-2 leading-relaxed">{{ c.complaint_text }}</p>
+                    </div>
+
+                    <!-- Footer Tags & Actions -->
+                    <div class="flex items-center justify-between mt-4 border-t border-gray-700 pt-4">
+                        <div class="flex items-center gap-3">
+                            <!-- Specific Review Issue Tag -->
+                            <div class="flex items-center bg-gray-700 rounded-md px-2 py-1 border border-gray-600">
+                                <span class="text-xs font-bold text-teal-400 mr-2">{{ (c.review_issue or
+                                    'Unknown').replace('_', ' ').title() }}</span>
+                                <span class="text-[10px] text-gray-400 font-mono">Conf: {{ ((c.review_confidence or
+                                    0)*100)|int }}%</span>
+                            </div>
+
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest font-semibold ml-2">
+                                Suggested: {{ c.suggested_team }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="ignoreIssue({{ c.id }}, '{{ c.review_issue }}')"
+                                class="text-xs text-gray-500 hover:text-red-400 px-2 py-1 transition-colors border border-transparent hover:border-red-900/30 rounded">
+                                Mark Invalid
+                            </button>
+
+                            <a href="/triage?id={{ c.id }}"
+                                class="bg-[#2A9D8F] hover:bg-[#21867a] text-white px-4 py-1.5 rounded text-sm font-medium shadow-sm transition-all transform hover:translate-y-px">
+                                Review & Assign
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Script was here -->
             {% else %}
-            <div class="col-span-full text-center py-12 text-gray-500">
-                <p class="text-lg">Response queue is empty! Great job. 🎉</p>
+            <div class="text-center py-20">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-800 mb-4">
+                    <span class="text-2xl">🎉</span>
+                </div>
+                <h3 class="text-xl font-medium text-gray-300">All caught up!</h3>
+                <p class="text-gray-500 mt-1">No pending decisions in the queue.</p>
             </div>
             {% endfor %}
         </div>
 
     </main>
+    <script>
+        async function ignoreIssue(id, issue) {
+            if (!confirm('Mark this issue as invalid? It will be removed from the queue.')) return;
+            try {
+                const res = await fetch('/api/triage/ignore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, issue })
+                });
+                if (res.ok) window.location.reload();
+                else alert('Failed to ignore issue');
+            } catch (e) { console.error(e); }
+        }
+    </script>
 </body>
 
 </html>

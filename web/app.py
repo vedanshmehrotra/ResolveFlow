@@ -2,8 +2,8 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
 from database import (init_db, init_assignments_table, add_complaint, get_all_complaints, update_complaint_status, 
                       get_complaint_by_id, override_complaint_routing, create_assignment, 
-                      get_assignments, update_assignment_status, get_decision_queue)
-from model import route_complaint, get_team_name
+                      get_assignments, update_assignment_status, get_decision_queue, get_db_connection, get_dashboard_stats)
+from model import route_complaint, get_team_name, get_all_teams
 
 app = Flask(__name__, 
             template_folder='../frontend/templates',
@@ -21,7 +21,6 @@ def home():
 @app.route('/admin')
 def admin():
     """Render Admin Dashboard (Read Only)"""
-    # Now this is just an overview/audit log
     complaints = get_all_complaints()
     # Fetch assignments for each complaint to show status
     assignments_map = {}
@@ -30,21 +29,63 @@ def admin():
         cid = a['complaint_id']
         if cid not in assignments_map: assignments_map[cid] = []
         assignments_map[cid].append(a)
+    
+    # Get DB-derived stats
+    stats = get_dashboard_stats()
         
-    return render_template('admin.html', complaints=complaints, assignments_map=assignments_map)
+    return render_template('admin.html', complaints=complaints, assignments_map=assignments_map, stats=stats)
 
 @app.route('/decision-queue')
 def decision_queue_page():
     """Render Triage Decision Panel"""
+    priority_filter = request.args.get('priority')
     queue = get_decision_queue()
-    return render_template('decision_panel.html', complaints=queue)
+    
+    # Filter by priority if selected
+    if priority_filter and priority_filter.lower() in ['high', 'medium', 'low']:
+        queue = [c for c in queue if c.get('predicted_urgency', '').lower() == priority_filter.lower()]
+        
+    return render_template('decision_panel.html', complaints=queue, active_priority=priority_filter)
 
 @app.route('/assignments')
 def assignments_page():
     """Render Operations Inbox"""
     team_filter = request.args.get('team')
+    
+    # Get Dynamic Teams
+    from database import get_active_teams
+    all_teams = get_active_teams()
+    
     assignments = get_assignments(team_filter)
-    return render_template('assignments.html', assignments=assignments, active_team=team_filter)
+    return render_template('assignments.html', assignments=assignments, active_team=team_filter, all_teams=all_teams)
+
+@app.route('/api/triage/ignore', methods=['POST'])
+def ignore_issue_route():
+    """Mark a specific issue as ignored so it leaves the queue"""
+    try:
+        data = request.json
+        complaint_id = data.get('id')
+        issue = data.get('issue')
+        
+        if not complaint_id or not issue:
+             return jsonify({'success': False, 'message': 'Missing data'}), 400
+             
+        # We assume the goal is to stop showing it in the queue.
+        # Our queue logic filters out issues mentioned in admin_notes as "IGNORED_ISSUE: {issue}"
+        
+        # Append note
+        note = f"\nIGNORED_ISSUE: {issue}"
+        
+        with get_db_connection() as conn:
+             # concat to review_notes
+             conn.execute("UPDATE complaints SET review_notes = COALESCE(review_notes, '') || ? WHERE id = ?", (note, complaint_id))
+             conn.commit()
+             
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        print(f"Error ignoring issue: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # Helper for SLA
 def get_sla_class(urgency: str) -> str:
@@ -58,7 +99,7 @@ def submit_complaint():
     """Handle new complaint submission"""
     try:
         data = request.json
-        text = data.get('text', '')
+        text = data.get('complaint_text') or data.get('text', '')
         
         # 0. Input Gate Rule
         if not text or len(text.strip()) < 5:
@@ -121,8 +162,14 @@ def submit_complaint():
                 
                 print(f"Issue: {issue}, Conf: {conf}, Keyword Found: {has_keyword}")
                 
-                # STRICT SAFETY GATE
-                if conf >= 0.85 and has_keyword:
+                # Multi-Issue Logic:
+                # 1. Auto-Assign: >= 0.85 (Keyword check optional? User prompt didn't specify keyword strictness for this new logic, 
+                #    but said "Confidence >= 85% -> Auto-assign". Let's stick to strict confidence).
+                #    Actually, existing logic used keywords as safety. Let's keep keywords as a booster or safety?
+                #    User Prompt: "Confidence >= 85% -> Auto-assign". Simplifies it.
+                #    Let's trust the ML score per user request to "Minimal Design Rule".
+                
+                if conf >= 0.85:
                     create_assignment(complaint_id, team, issue, conf, sla)
                     assignments_created.append(team)
                     response_assignments.append({
@@ -131,14 +178,20 @@ def submit_complaint():
                         "sla": sla,
                         "status": "SENT"
                     })
-                # If < 0.85 OR (>= 0.85 but no keyword), it falls through to queue logic below
+                elif conf >= 0.65:
+                    # 2. Manual Review: 65-84%
+                    # Do not create assignment. It will show in Decision Queue.
+                    pass
+                else:
+                    # 3. Ignore: < 65%
+                    pass
             
             print("Assignments created:", assignments_created)
             
             # Update status if assignments were made
             if assignments_created:
                  with get_db_connection() as conn:
-                      conn.execute("UPDATE complaints SET review_status = 'ROUTED' WHERE id = ?", (complaint_id,))
+                      conn.execute("UPDATE complaints SET review_status = 'PARTIAL' WHERE id = ?", (complaint_id,))
                       conn.commit()
 
         except Exception as ex:
@@ -170,16 +223,16 @@ def triage_page():
     if not complaint:
         return "Complaint not found", 404
         
-    return render_template('triage.html', c=complaint)
+    all_teams = get_all_teams()
+    return render_template('triage.html', c=complaint, all_teams=all_teams)
 
 @app.route('/api/triage/override', methods=['POST'])
 def override_triage():
     """Handle manual override of routing and create assignments"""
     try:
         data = request.json
-        print("Override payload:", data)
         complaint_id = data.get('id')
-        corrected_teams = data.get('corrected_teams', []) # List of team names now
+        corrected_teams = data.get('corrected_teams', []) 
         corrected_issues = data.get('corrected_issues', [])
         
         if not complaint_id:

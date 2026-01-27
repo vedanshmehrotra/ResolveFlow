@@ -14,135 +14,221 @@
     </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-50 h-screen overflow-hidden flex font-inter">
 
-    <div class="max-w-xl w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        <!-- Header -->
-        <div class="bg-blue-600 px-8 py-6">
-            <h1 class="text-2xl font-bold text-white mb-2">Hostel Complaint Portal</h1>
-            <p class="text-blue-100 text-sm">Submit your maintenance request for automated routing.</p>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-[#264653] text-white flex-shrink-0 hidden md:flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-[#2A9D8F]">
+            <span class="text-xl font-bold tracking-tight">ResolveFlow</span>
         </div>
-
-        <!-- Form -->
-        <div class="px-8 py-8 space-y-6">
-            <div>
-                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                <input type="text" id="name"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                    placeholder="John Doe">
-            </div>
-
-            <div>
-                <label for="student_id" class="block text-sm font-medium text-gray-700 mb-1">Student ID
-                    (Optional)</label>
-                <input type="text" id="student_id"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                    placeholder="e.g., 21BBS001">
-            </div>
-
-            <div>
-                <label for="room_number" class="block text-sm font-medium text-gray-700 mb-1">Room Number *</label>
-                <input type="text" id="room_number"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                    placeholder="e.g., 404">
-            </div>
-
-            <div>
-                <label for="complaint" class="block text-sm font-medium text-gray-700 mb-1">Complaint
-                    Description</label>
-                <textarea id="complaint" rows="5"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                    placeholder="Example: The lights are flickering in my room and the AC is giving off heat instead of cooling."></textarea>
-                <p class="text-xs text-gray-500 mt-1">Please be detailed. Min 5 words.</p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Model Type</label>
-                <div class="flex space-x-4">
-                    <label class="flex items-center space-x-2">
-                        <input type="radio" name="model" value="ML" checked class="text-blue-600 focus:ring-blue-500">
-                        <span class="text-sm text-gray-700">Machine Learning (Linear)</span>
-                    </label>
-                    <label class="flex items-center space-x-2">
-                        <input type="radio" name="model" value="DL" class="text-blue-600 focus:ring-blue-500">
-                        <span class="text-sm text-gray-700">Deep Learning (LSTM)</span>
-                    </label>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="#"
+                class="flex items-center px-4 py-3 text-sm font-medium text-gray-300 hover:bg-[#2A9D8F] hover:text-white rounded-lg transition-colors">
+                <svg class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="#"
+                class="flex items-center px-4 py-3 text-sm font-medium bg-[#2A9D8F] text-white rounded-lg shadow-sm">
+                <svg class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Submit New
+            </a>
+            <a href="#"
+                class="flex items-center px-4 py-3 text-sm font-medium text-gray-300 hover:bg-[#2A9D8F] hover:text-white rounded-lg transition-colors">
+                <svg class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                My Requests
+            </a>
+        </nav>
+        <div class="p-4 border-t border-[#2A9D8F]">
+            <div class="flex items-center gap-3">
+                <div
+                    class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-[#264653] font-bold text-xs">
+                    JD</div>
+                <div>
+                    <div class="text-sm font-medium">Student</div>
+                    <div class="text-xs text-gray-400">View Profile</div>
                 </div>
             </div>
-
-            <button onclick="submitComplaint()" id="submitBtn"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200 transform hover:scale-[1.01] active:scale-[0.99] shadow-md">
-                Submit Complaint
-            </button>
         </div>
-    </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+
+        <!-- Headers (Mobile/Desktop) -->
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-8">
+            <h2 class="text-lg font-semibold text-gray-800">Submit a Maintenance Request</h2>
+            <!-- Mobile Menu Button (Visible only on small screens) -->
+            <button class="md:hidden text-gray-600 focus:outline-none">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 p-6 lg:p-8">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:p-8">
+                    <h3 class="text-xl font-bold text-[#264653] mb-2">New Request</h3>
+                    <p class="text-gray-500 text-sm mb-6">Please provide details about the issue so our automatic
+                        routing system can assign the correct team.</p>
+
+                    <div class="space-y-6">
+                        <!-- Personal Info -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <input type="text" id="name" placeholder="John Doe"
+                                    class="w-full h-10 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] outline-none transition-shadow text-sm">
+                            </div>
+                            <div>
+                                <label for="student_id" class="block text-sm font-medium text-gray-700 mb-1">Student ID
+                                    (Opt)</label>
+                                <input type="text" id="student_id" placeholder="e.g., 21BBS001"
+                                    class="w-full h-10 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] outline-none transition-shadow text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="room_number" class="block text-sm font-medium text-gray-700 mb-1">Room Number
+                                <span class="text-red-500">*</span></label>
+                            <input type="text" id="room_number" placeholder="e.g., 404"
+                                class="w-full max-w-xs h-10 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] outline-none transition-shadow text-sm">
+                        </div>
+
+                        <!-- Description -->
+                        <div>
+                            <label for="complaint" class="block text-sm font-medium text-gray-700 mb-1">Description of
+                                Issue <span class="text-red-500">*</span></label>
+                            <textarea id="complaint" rows="5"
+                                placeholder="Please describe the problem in detail. Example: The sink in the bathroom is leaking water onto the floor..."
+                                class="w-full px-3 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] outline-none transition-shadow text-sm resize-none"></textarea>
+                            <p class="text-xs text-gray-400 mt-1">Provide at least 5 words for accurate AI detection.
+                            </p>
+                        </div>
+
+                        <!-- Model Selection -->
+                        <div class="pt-2 border-t border-gray-100">
+                            <span class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Select
+                                Model</span>
+                            <div class="flex space-x-6">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="model" value="ML" checked
+                                        class="text-[#2A9D8F] focus:ring-[#2A9D8F]">
+                                    <span class="text-sm text-gray-700">Standard ML</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="radio" name="model" value="DL"
+                                        class="text-[#2A9D8F] focus:ring-[#2A9D8F]">
+                                    <span class="text-sm text-gray-700">Deep Learning </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex items-center justify-end space-x-4">
+                            <button
+                                class="px-5 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">Cancel</button>
+                            <button onclick="submitComplaint()" id="submitBtn"
+                                class="px-5 py-2 text-sm font-medium text-white bg-[#2A9D8F] hover:bg-[#21867a] rounded-md shadow-sm transition-all transform hover:translate-y-px">
+                                Submit Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Helper Text -->
+                <div
+                    class="mt-6 flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
+                    <svg class="h-5 w-5 flex-shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <strong class="block font-semibold mb-1">Safety First</strong>
+                        If this is an emergency (e.g., active fire, gas leak, flooding), please call the hostel warden
+                        immediately instead of submitting a ticket.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
 
     <!-- Success Modal -->
-    <div id="resultModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all scale-100">
+    <div id="resultModal"
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-fade-in-up">
             <div class="text-center">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                    <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">Complaint Received!</h3>
-                <p class="text-sm text-gray-500 mb-6">Your ticket has been processed and routed.</p>
+                <h3 class="text-lg font-bold text-gray-900 mb-1">Request Submitted</h3>
+                <p class="text-sm text-gray-500 mb-6">Your ticket has been routed to the appropriate team.</p>
 
-                <div class="bg-gray-50 rounded-lg p-4 text-left space-y-3 mb-6 border border-gray-100">
-                    <div class="flex justify-between">
-                        <span class="text-sm font-medium text-gray-500">Ticket ID</span>
-                        <span class="text-sm font-bold text-gray-900" id="ticketId">#--</span>
+                <div class="bg-gray-50 rounded-md p-4 text-left space-y-3 mb-6 border border-gray-200">
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                        <span class="text-xs uppercase font-semibold text-gray-500">Ticket ID</span>
+                        <span class="font-mono text-sm font-bold text-[#264653]" id="ticketId">#--</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm font-medium text-gray-500">Assigned Team</span>
-                        <span class="text-sm font-bold text-blue-600" id="assignedTeam">--</span>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-sm font-medium text-gray-600">Assigned Team</span>
+                        <span class="text-sm font-bold text-[#2A9D8F]" id="assignedTeam">--</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm font-medium text-gray-500">Routing Status</span>
-                        <span class="text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-800"
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-600">Routing Status</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800"
                             id="routingStatus">--</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm font-medium text-gray-500">SLA Class</span>
-                        <span class="text-sm font-bold text-red-600" id="slaClass">--</span>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-600">SLA Priority</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-gray-200 text-gray-700"
+                            id="slaClass">--</span>
                     </div>
                 </div>
 
-                <div class="flex space-x-3">
+                <div class="grid grid-cols-2 gap-3">
                     <button onclick="closeModal()"
-                        class="flex-1 bg-white border border-gray-300 text-gray-700 font-medium py-2 rounded-lg hover:bg-gray-50 transition">Close</button>
+                        class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A9D8F]">
+                        Close
+                    </button>
                     <a href="/admin"
-                        class="flex-1 bg-blue-600 text-white font-medium py-2 rounded-lg hover:bg-blue-700 transition flex items-center justify-center">View
-                        in Admin</a>
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#264653] hover:bg-[#1f3a45] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#264653]">
+                        Track in Admin
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Error/Loading Toast (Simplified as alert for MVP) -->
 
     <script>
         async function submitComplaint() {
             const btn = document.getElementById('submitBtn');
             const originalText = btn.innerText;
-
-            // Get values
             const name = document.getElementById('name').value;
             const student_id = document.getElementById('student_id').value;
             const text = document.getElementById('complaint').value;
             const model = document.querySelector('input[name="model"]:checked').value;
-
             const room = document.getElementById('room_number').value;
 
             if (!text.trim() || !room.trim()) {
-                alert("Please enter a room number and complaint.");
+                alert("Please enter a room number and complaint description.");
                 return;
             }
 
-            // Loading state
             btn.disabled = true;
-            btn.innerText = "Submitting Complaint...";
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Submitting...`;
 
             try {
                 const response = await fetch('/api/submit', {
@@ -151,7 +237,7 @@
                     body: JSON.stringify({
                         student_name: name || "Anonymous",
                         student_id: student_id,
-                        room_number: document.getElementById('room_number').value,
+                        room_number: room,
                         text: text,
                         model_type: model
                     })
@@ -160,39 +246,36 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    // Populate Modal
                     document.getElementById('ticketId').innerText = "#" + result.data.id;
-
                     const assignments = result.data.assignments || [];
                     let teamText = "Pending Review";
-                    if (assignments.length === 1) {
-                        teamText = assignments[0].team;
-                    } else if (assignments.length > 1) {
-                        teamText = "Multiple Teams Assigned (" + assignments.length + ")";
-                    }
+                    if (assignments.length === 1) teamText = assignments[0].team;
+                    else if (assignments.length > 1) teamText = `Multiple (${assignments.length})`;
 
                     document.getElementById('assignedTeam').innerText = teamText;
                     document.getElementById('routingStatus').innerText = result.data.decision;
 
-                    // Show SLA of first assignment or default based on urgency
                     let sla = "P3";
                     if (assignments.length > 0) sla = assignments[0].sla || "P3";
                     document.getElementById('slaClass').innerText = sla;
 
-                    // Show Modal
-                    document.getElementById('resultModal').classList.remove('hidden');
+                    // Style SLA badge
+                    const slaEl = document.getElementById('slaClass');
+                    if (sla === 'P1') slaEl.className = "text-xs font-bold px-2 py-0.5 rounded bg-red-100 text-red-800";
+                    else if (sla === 'P2') slaEl.className = "text-xs font-bold px-2 py-0.5 rounded bg-yellow-100 text-yellow-800";
+                    else slaEl.className = "text-xs font-bold px-2 py-0.5 rounded bg-green-100 text-green-800";
 
-                    // Clear form
+                    document.getElementById('resultModal').classList.remove('hidden');
                     document.getElementById('complaint').value = "";
                 } else {
                     alert(`Error: ${result.message}`);
                 }
             } catch (err) {
-                alert("Something went wrong. check console.");
                 console.error(err);
+                alert("Connection failed.");
             } finally {
                 btn.disabled = false;
-                btn.innerText = originalText;
+                btn.innerText = "Submit Request";
             }
         }
 

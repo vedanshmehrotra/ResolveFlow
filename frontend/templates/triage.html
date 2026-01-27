@@ -14,122 +14,205 @@
     </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen p-6">
+<body class="bg-gray-900 text-gray-100 min-h-screen font-inter flex flex-col">
 
-    <div class="max-w-6xl mx-auto">
+    <!-- Navbar (Consistent) -->
+    <nav class="bg-gray-800 border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-gray-100 flex items-center gap-2">
+                        <span>🔎</span> Triage Review
+                    </span>
+                    <div class="ml-10 flex space-x-4">
+                        <a href="/decision-queue"
+                            class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Decision
+                            Queue</a>
+                        <a href="/assignments"
+                            class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Operations</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Header -->
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-900">Ticket Review #{{ c.id }}</h1>
-            <a href="/admin" class="text-sm text-gray-600 hover:text-gray-900">← Back to Inbox</a>
+            <div class="flex items-baseline gap-3">
+                <h1 class="text-2xl font-bold text-gray-100">Review Ticket #{{ c.id }}</h1>
+                <span class="text-sm font-mono text-gray-500">{{ c.timestamp.split(' ')[0] }}</span>
+            </div>
+            <a href="/decision-queue"
+                class="text-gray-400 hover:text-white text-sm font-medium flex items-center gap-1 transition-colors">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Queue
+            </a>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            <!-- LEFT: Read Only Context -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">📋 Student Complaint</h2>
-
-                <div class="space-y-4">
-                    <div>
-                        <span class="block text-xs font-medium text-gray-500 uppercase">Student</span>
-                        <div class="text-gray-900 font-medium">{{ c.student_name }} <span
-                                class="text-gray-400 font-normal">({{ c.student_id }})</span></div>
-                    </div>
-                    <div>
-                        <span class="block text-xs font-medium text-gray-500 uppercase">Room</span>
-                        <div class="text-gray-900 font-medium">{{ c.room_number or 'N/A' }}</div>
-                    </div>
-                    <div>
-                        <span class="block text-xs font-medium text-gray-500 uppercase">Description</span>
-                        <div
-                            class="p-3 bg-gray-50 rounded border border-gray-200 text-gray-700 text-sm whitespace-pre-wrap">
-                            {{ c.complaint_text }}</div>
+            <!-- LEFT PANEL: Context (7 cols) -->
+            <div class="lg:col-span-7 space-y-6">
+                <!-- Request Summary Card -->
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                    <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-700">
+                        <h2 class="text-lg font-bold text-gray-200 flex items-center gap-2">
+                            <span>📋</span> Complaint Details
+                        </h2>
+                        <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded font-mono">{{ c.room_number or
+                            'No Room' }}</span>
                     </div>
 
-                    <div class="pt-4 border-t">
-                        <h3 class="text-sm font-bold text-gray-800 mb-2">🤖 AI Analysis</h3>
+                    <div class="space-y-5">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <span class="block text-xs font-medium text-gray-500">Detected Issues</span>
-                                <div class="flex flex-wrap gap-1 mt-1">
-                                    {% for issue in c.predicted_issues %}
-                                    <span class="px-2 py-0.5 rounded text-xs bg-gray-100 border border-gray-200">
-                                        {{ issue.replace('_', ' ').title() }}
-                                        <span class="text-gray-400 text-[10px] ml-1">{{ (c.confidence_scores.get(issue,
-                                            0)*100)|int }}%</span>
-                                    </span>
-                                    {% endfor %}
+                                <span
+                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Student</span>
+                                <div class="text-gray-200 font-medium">{{ c.student_name }}</div>
+                                <div class="text-xs text-gray-500 font-mono">{{ c.student_id or 'ID Not Provided' }}
                                 </div>
                             </div>
                             <div>
-                                <span class="block text-xs font-medium text-gray-500">Routing Decision</span>
-                                <div class="text-sm text-gray-900">{{ c.routing_decision }}</div>
-                                <div class="text-xs text-gray-500">Source: {{ c.assignment_source }}</div>
+                                <span
+                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Received</span>
+                                <div class="text-gray-300 text-sm">{{ c.timestamp }}</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Issue
+                                Description</span>
+                            <div
+                                class="p-4 bg-gray-900/50 rounded-lg border border-gray-700 text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-mono">
+                                {{ c.complaint_text }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Analysis Card -->
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+                    <h2
+                        class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-700 pb-2">
+                        System Classification</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <span class="block text-xs text-gray-500 mb-2">Predicted Categories</span>
+                            <div class="flex flex-wrap gap-2">
+                                {% for issue in c.predicted_issues %}
+                                {% set curr_conf = (c.confidence_scores.get(issue, 0)*100)|int %}
+                                <div class="flex items-center bg-gray-700 rounded px-2 py-1.5 border border-gray-600">
+                                    <span class="text-sm text-teal-400 font-medium mr-2">{{ issue.replace('_', '
+                                        ').title() }}</span>
+                                    <span class="text-xs text-gray-500">{{ curr_conf }}%</span>
+                                    <div class="w-12 h-1 bg-gray-600 rounded-full ml-2 overflow-hidden">
+                                        <div class="h-full bg-teal-500" style="width: {{ curr_conf }}%"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="block text-xs text-gray-500 mb-2">Routing Metadata</span>
+                            <div class="bg-gray-900/50 rounded p-3 border border-gray-700/50">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-500">Method:</span>
+                                    <span class="text-gray-300 font-mono">{{ c.routing_decision }}</span>
+                                </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-gray-500">Model:</span>
+                                    <span class="text-purple-400 font-mono">{{ c.assignment_source }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- RIGHT: Triage Actions -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">🔧 Correction & Override</h2>
+            <!-- RIGHT PANEL: Controls (5 cols) -->
+            <div class="lg:col-span-5">
+                <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 sticky top-6">
+                    <h2 class="text-lg font-bold text-gray-200 mb-6 flex items-center gap-2">
+                        <span>🔧</span> Routing Controls
+                    </h2>
 
-                <div class="space-y-6">
-                    <!-- Urgency -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Correct Urgency</label>
-                        <select id="urgency"
-                            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            {% set current_urgency = c.corrected_urgency or c.predicted_urgency %}
-                            <option value="low" {% if current_urgency=='low' %}selected{% endif %}>Low</option>
-                            <option value="medium" {% if current_urgency=='medium' %}selected{% endif %}>Medium</option>
-                            <option value="high" {% if current_urgency=='high' %}selected{% endif %}>High</option>
-                        </select>
-                    </div>
+                    <div class="space-y-6">
+                        <!-- Urgency Selector -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Priority
+                                Level</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                {% set current_urgency = c.corrected_urgency or c.predicted_urgency %}
+                                <button type="button" onclick="selectUrgency('low')" id="btn-low"
+                                    class="py-2 px-3 rounded border text-sm font-medium transition-all {{ 'bg-green-900/30 border-green-600 text-green-400' if current_urgency == 'low' else 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500' }}">
+                                    Low
+                                </button>
+                                <button type="button" onclick="selectUrgency('medium')" id="btn-medium"
+                                    class="py-2 px-3 rounded border text-sm font-medium transition-all {{ 'bg-yellow-900/30 border-yellow-600 text-yellow-400' if current_urgency == 'medium' else 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500' }}">
+                                    Medium
+                                </button>
+                                <button type="button" onclick="selectUrgency('high')" id="btn-high"
+                                    class="py-2 px-3 rounded border text-sm font-medium transition-all {{ 'bg-red-900/30 border-red-600 text-red-400' if current_urgency == 'high' else 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500' }}">
+                                    High
+                                </button>
+                                <input type="hidden" id="urgency" value="{{ current_urgency }}">
+                            </div>
+                        </div>
 
-                    <!-- Issues (Multi-select simulation) -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Correct Issues (Select all that
-                            apply)</label>
-                        <div class="grid grid-cols-2 gap-2" id="issues-container">
-                            <!-- JS will populate checkboxes -->
+                        <!-- Team Assignment -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Assign
+                                Teams</label>
+                            <div
+                                class="bg-gray-900 border border-gray-600 rounded-md p-1 min-h-[160px] max-h-[240px] overflow-y-auto custom-scrollbar">
+                                <div id="teams-container" class="space-y-0.5">
+                                    <!-- JS Populated -->
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-1.5 flex justify-between">
+                                <span>Select multiple if needed.</span>
+                                <span class="text-gray-400">Ctrl+Click</span>
+                            </p>
+                        </div>
+
+                        <!-- Issues Tags -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Verify
+                                Categories</label>
+                            <div class="flex flex-wrap gap-2" id="issues-container">
+                                <!-- JS Populated Checkboxes style as pills -->
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Review
+                                Notes</label>
+                            <textarea id="notes" rows="3" placeholder="Add context for the operations team..."
+                                class="w-full bg-gray-900 border border-gray-700 rounded p-3 text-sm text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-600 transition">{{ c.review_notes or '' }}</textarea>
+                        </div>
+
+                        <!-- Action Button -->
+                        <div class="pt-4 border-t border-gray-700">
+                            <button onclick="submitOverride()"
+                                class="w-full bg-[#2A9D8F] hover:bg-[#21867a] text-white py-3 px-4 rounded-md font-bold shadow-lg transition-transform transform active:scale-95 flex justify-center items-center gap-2">
+                                <span>Confirm Assignment</span>
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
-
-                    <!-- Teams -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Assign Teams (Hold Ctrl/Cmd to
-                            select multiple)</label>
-                        <select id="teams" multiple
-                            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 min-h-[160px]">
-                            <!-- Populated by JS -->
-                        </select>
-                    </div>
-
-                    <!-- Notes -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Review Notes</label>
-                        <textarea id="notes" rows="3"
-                            class="w-full border-gray-300 rounded-md shadow-sm">{{ c.review_notes or '' }}</textarea>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="pt-4 flex gap-4">
-                        <button onclick="submitOverride()"
-                            class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-medium shadow-sm transition">
-                            Confirm & Assign
-                        </button>
-                    </div>
-
-                    {% if c.review_status == 'OVERRIDDEN' %}
-                    <div class="mt-4 p-3 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200">
-                        ⚠ Overridden on {{ c.review_timestamp }}
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
         // Config
@@ -138,64 +221,86 @@
             'furniture_issue', 'cleanliness_issue', 'food_issue',
             'noise_issue', 'billing_issue', 'other_issue'
         ];
+        const ALL_TEAMS = {{ all_teams | tojson }};
 
-        const ALL_TEAMS = [
-            "Electrical Team", "IT/Network Team", "Plumbing Team",
-            "Furniture/Maintenance Team", "Housekeeping Team",
-            "Mess Management", "Hostel Administration",
-            "Accounts Department", "General Maintenance"
-        ];
-
-        // Pass server data to JS safely
+        // Data
         const currentIssues = {{ (c.corrected_issues or c.predicted_issues) | tojson }};
-        const currentTeams = {{ (c.corrected_teams or[c.routed_team]) | tojson }}; // Handle single string or list
+        const currentTeams = {{ (c.corrected_team.split(', ') if c.corrected_team else (c.routed_team.split(', ') if c.routed_team else[])) | tojson }};
         const complaintId = {{ c.id }};
 
-        // Render Issue Checkboxes
+        // Urgency Helper
+        function selectUrgency(level) {
+            document.getElementById('urgency').value = level;
+            // Reset Styles
+            ['low', 'medium', 'high'].forEach(l => {
+                const btn = document.getElementById('btn-' + l);
+                btn.className = 'py-2 px-3 rounded border text-sm font-medium transition-all bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500';
+            });
+            // Set Active Style
+            const btn = document.getElementById('btn-' + level);
+            if (level === 'low') btn.className = 'py-2 px-3 rounded border text-sm font-medium transition-all bg-green-900/30 border-green-600 text-green-400';
+            if (level === 'medium') btn.className = 'py-2 px-3 rounded border text-sm font-medium transition-all bg-yellow-900/30 border-yellow-600 text-yellow-400';
+            if (level === 'high') btn.className = 'py-2 px-3 rounded border text-sm font-medium transition-all bg-red-900/30 border-red-600 text-red-400';
+        }
+
+        // Render Issue Pills
         const issueContainer = document.getElementById('issues-container');
         ALL_CATEGORIES.forEach(cat => {
             const isChecked = currentIssues.includes(cat);
             const label = document.createElement('label');
-            label.className = `flex items-center space-x-2 p-2 rounded border ${isChecked ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'} cursor-pointer hover:bg-gray-100 transition`;
-            label.innerHTML = `
-                <input type="checkbox" value="${cat}" ${isChecked ? 'checked' : ''} class="text-blue-600 rounded focus:ring-blue-500">
-                <span class="text-xs font-medium text-gray-700">${cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-            `;
-            // Add click listener to toggle style
-            label.querySelector('input').addEventListener('change', (e) => {
+            label.className = `cursor-pointer text-xs font-medium px-2.5 py-1 rounded border transition select-none flex items-center gap-1.5 ${isChecked ? 'bg-blue-900/40 border-blue-500 text-blue-200' : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-500'}`;
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = cat;
+            checkbox.checked = isChecked;
+            checkbox.className = 'hidden';
+
+            checkbox.addEventListener('change', (e) => {
                 if (e.target.checked) {
-                    label.classList.add('bg-blue-50', 'border-blue-200');
-                    label.classList.remove('bg-gray-50', 'border-gray-200');
+                    label.className = 'cursor-pointer text-xs font-medium px-2.5 py-1 rounded border transition select-none flex items-center gap-1.5 bg-blue-900/40 border-blue-500 text-blue-200';
                 } else {
-                    label.classList.remove('bg-blue-50', 'border-blue-200');
-                    label.classList.add('bg-gray-50', 'border-gray-200');
+                    label.className = 'cursor-pointer text-xs font-medium px-2.5 py-1 rounded border transition select-none flex items-center gap-1.5 bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-500';
                 }
             });
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())));
             issueContainer.appendChild(label);
         });
 
-        // Populate Teams
-        const teamSelect = document.getElementById('teams');
+        // Render Teams List
+        const teamsContainer = document.getElementById('teams-container');
         ALL_TEAMS.forEach(team => {
-            const option = document.createElement('option');
-            option.value = team;
-            option.text = team;
-            if (currentTeams.includes(team)) {
-                option.selected = true;
-            }
-            teamSelect.appendChild(option);
+            const isSelected = currentTeams.includes(team);
+            const div = document.createElement('div');
+            div.className = `px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-gray-800 transition ${isSelected ? 'bg-gray-800' : ''}`;
+
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-3 cursor-pointer w-full';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = team;
+            checkbox.checked = isSelected;
+            checkbox.name = 'teams';
+            checkbox.className = 'rounded bg-gray-700 border-gray-500 text-blue-500 focus:ring-blue-500/50';
+
+            const span = document.createElement('span');
+            span.className = 'text-sm text-gray-300';
+            span.innerText = team;
+
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            div.appendChild(label);
+            teamsContainer.appendChild(div);
         });
 
         async function submitOverride() {
-            // Gather Data
             const urgency = document.getElementById('urgency').value;
             const notes = document.getElementById('notes').value;
-
             const selectedIssues = Array.from(document.querySelectorAll('#issues-container input:checked')).map(cb => cb.value);
-
-            // Get selected teams from select multiple
-            const teamSelect = document.getElementById('teams');
-            const selectedTeams = Array.from(teamSelect.selectedOptions).map(o => o.value);
+            const selectedTeams = Array.from(document.querySelectorAll('input[name="teams"]:checked')).map(cb => cb.value);
 
             if (selectedTeams.length === 0) {
                 alert("Please select at least one team.");
@@ -216,8 +321,7 @@
                 });
 
                 if (response.ok) {
-                    alert('Override Saved Successfully');
-                    window.location.href = '/assignments';
+                    window.location.href = '/decision-queue'; // Go back to queue on success
                 } else {
                     const d = await response.json();
                     alert('Error: ' + d.message);
@@ -228,6 +332,24 @@
             }
         }
     </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
 </body>
 
 </html>
