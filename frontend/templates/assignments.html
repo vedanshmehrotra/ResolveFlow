@@ -15,24 +15,38 @@
 
 <body class="bg-gray-100 min-h-screen">
 
-    <nav class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-900">
+
+        <!-- Header with Consolidated Navigation -->
+        <header
+            class="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8 shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-8">
+                <h2 class="text-lg font-semibold text-gray-100 flex items-center gap-2">
+                    <span class="text-xl">🔨</span> Operations Console <span
+                        class="text-gray-600 text-sm font-normal ml-2">| Active Assignments</span>
+                </h2>
+
+                <nav class="flex items-center space-x-1">
+                    <a href="/decision-queue"
+                        class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
+                        Decision Queue
+                    </a>
+                    <a href="/admin"
+                        class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
+                        Audit Log
+                    </a>
+                </nav>
+            </div>
+
+            <div class="flex items-center gap-4">
                 <div class="flex items-center">
-                    <span class="text-xl font-bold text-gray-800">🔨 Operations</span>
-                    <div class="ml-10 flex space-x-4">
-                        <a href="/decision-queue"
-                            class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Decision
-                            Queue</a>
-                        <a href="/admin"
-                            class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Audit</a>
-                    </div>
-                </div>
-                <div class="flex items-center">
-                    <!-- Team Filter -->
                     <form action="/assignments" method="GET" class="flex items-center">
+                        <label
+                            class="mr-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest hidden sm:block">Filter
+                            Team:</label>
                         <select name="team" onchange="this.form.submit()"
-                            class="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                            class="text-xs border border-gray-700 rounded-md shadow-sm focus:border-blue-500 focus:ring-0 py-1.5 pl-3 pr-8 bg-gray-800 text-gray-200 cursor-pointer hover:bg-gray-750 transition-colors">
                             <option value="">All Teams</option>
                             {% for team_name in all_teams %}
                             <option value="{{ team_name }}" {% if active_team==team_name %}selected{% endif %}>
@@ -42,33 +56,9 @@
                         </select>
                     </form>
                 </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-900">
-
-        <!-- Header with Team Filter -->
-        <header class="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8 shadow-sm z-10">
-            <h2 class="text-lg font-semibold text-gray-100 flex items-center gap-2">
-                Operations Console <span class="text-gray-600 text-sm font-normal">| Active Assignments</span>
-            </h2>
-
-            <div class="flex items-center">
-                <form action="/assignments" method="GET" class="flex items-center">
-                    <label class="mr-3 text-xs text-gray-500 font-bold uppercase tracking-wider hidden sm:block">Filter
-                        by Team:</label>
-                    <select name="team" onchange="this.form.submit()"
-                        class="text-sm border border-gray-700 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500/20 py-1.5 pl-3 pr-8 bg-gray-800 text-gray-200">
-                        <option value="">All Teams</option>
-                        {% for team_name in all_teams %}
-                        <option value="{{ team_name }}" {% if active_team==team_name %}selected{% endif %}>
-                            {{ team_name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </form>
+                <div class="h-6 w-px bg-gray-800 mx-2"></div>
+                <a href="/logout"
+                    class="text-gray-500 hover:text-red-400 text-xs font-bold uppercase tracking-widest transition-colors">Logout</a>
             </div>
         </header>
 

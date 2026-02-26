@@ -1,26 +1,93 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 import os
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from database import (init_db, init_assignments_table, add_complaint, get_all_complaints, update_complaint_status, 
                       get_complaint_by_id, override_complaint_routing, create_assignment, 
                       get_assignments, update_assignment_status, get_decision_queue, get_db_connection, get_dashboard_stats)
 from model import route_complaint, get_team_name, get_all_teams
+from user_mgmt import get_user_by_id, get_user_by_username, verify_password
 
 app = Flask(__name__, 
             template_folder='../frontend/templates',
             static_folder='../frontend/static')
+app.secret_key = 'super-secret-key-for-hostel-triage' # In production use environment variable
+
+# Flask-Login Setup
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.init_app(app)
+
+class User(UserMixin):
+    def __init__(self, user_data):
+        self.id = user_data['id']
+        self.username = user_data['username']
+        self.role = user_data['role']
+
+@login_manager.user_loader
+def load_user(user_id):
+    user_data = get_user_by_id(int(user_id))
+    if user_data:
+        return User(user_data)
+    return None
 
 # Initialize DB on start
 init_db()
 init_assignments_table()
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user_data = get_user_by_username(username)
+        if user_data and verify_password(user_data['password_hash'], password):
+            user = User(user_data)
+            login_user(user)
+            if user.role == 'admin':
+                return redirect(url_for('admin')) # Changed from admin_dashboard to admin to match existing route
+            return redirect(url_for('home'))
+        return render_template('login.html', error='Invalid username or password')
+    return render_template('login.html')
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role', 'student')
+    
+    if not username or not password:
+        return render_template('login.html', error='All fields are required')
+        
+    try:
+        from user_mgmt import create_user
+        user_id = create_user(username, password, role=role)
+        if user_id:
+            return render_template('login.html', error='Account created! Please login.')
+        else:
+            return render_template('login.html', error='Username already exists')
+    except Exception as e:
+        return render_template('login.html', error=f'Signup failed: {str(e)}')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def home():
-    """Render Student Portal"""
-    return render_template('student.html')
+    """Render Student Portal with user's complaints"""
+    # Fetch complaints only for this student
+    complaints = get_all_complaints(user_id=current_user.id, hide_sensitive=True) if current_user.role != 'admin' else []
+    return render_template('student.html', user=current_user, complaints=complaints)
 
 @app.route('/admin')
+@login_required
 def admin():
     """Render Admin Dashboard (Read Only)"""
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
     complaints = get_all_complaints()
     # Fetch assignments for each complaint to show status
     assignments_map = {}
@@ -36,8 +103,11 @@ def admin():
     return render_template('admin.html', complaints=complaints, assignments_map=assignments_map, stats=stats)
 
 @app.route('/decision-queue')
+@login_required
 def decision_queue_page():
     """Render Triage Decision Panel"""
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
     priority_filter = request.args.get('priority')
     queue = get_decision_queue()
     
@@ -48,8 +118,13 @@ def decision_queue_page():
     return render_template('decision_panel.html', complaints=queue, active_priority=priority_filter)
 
 @app.route('/assignments')
+@login_required
 def assignments_page():
     """Render Operations Inbox"""
+    # For now, Ops also uses Admin/Student login, 
+    # but we could add an 'ops' role later.
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
     team_filter = request.args.get('team')
     
     # Get Dynamic Teams
@@ -106,7 +181,7 @@ def submit_complaint():
              print("Invalid input logged:", text)
              return jsonify({'success': True, 'message': 'Input logged', 'data': {'id': -1, 'decision': 'IGNORED'}}), 200
 
-        student_name = data.get('student_name', 'Anonymous')
+        student_name = current_user.username
         student_id = data.get('student_id', '')
         room_number = data.get('room_number', '')
         model_type = data.get('model_type', 'ML') 
@@ -118,6 +193,7 @@ def submit_complaint():
             return jsonify({'success': False, 'message': result['message']}), 400
             
         # 2. Add ID/Name info to result for DB
+        result['user_id'] = current_user.id
         result['student_name'] = student_name
         result['student_id'] = student_id
         result['room_number'] = room_number
@@ -178,12 +254,12 @@ def submit_complaint():
                         "sla": sla,
                         "status": "SENT"
                     })
-                elif conf >= 0.65:
-                    # 2. Manual Review: 65-84%
+                elif conf >= 0.30:
+                    # 2. Manual Review: 30-84%
                     # Do not create assignment. It will show in Decision Queue.
                     pass
                 else:
-                    # 3. Ignore: < 65%
+                    # 3. Ignore: < 30%
                     pass
             
             print("Assignments created:", assignments_created)
@@ -212,9 +288,30 @@ def submit_complaint():
         print(f"Error processing complaint: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/api/complaints/rate', methods=['POST'])
+@login_required
+def rate_complaint():
+    """Submit rating and feedback for a resolved complaint"""
+    data = request.json
+    complaint_id = data.get('complaint_id')
+    rating = data.get('rating')
+    feedback = data.get('feedback', '')
+    
+    if not complaint_id or not rating:
+        return jsonify({'success': False, 'message': 'Missing data'}), 400
+        
+    try:
+        from database import update_complaint_feedback
+        update_complaint_feedback(complaint_id, rating, feedback)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 @app.route('/triage')
+@login_required
 def triage_page():
     """Render Triage/Review Detail Page"""
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
     complaint_id = request.args.get('id')
     if not complaint_id:
         return "Missing Complaint ID", 400

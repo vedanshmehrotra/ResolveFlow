@@ -1,0 +1,70 @@
+=== LSTM ISSUE CLASSIFIER (120 test samples) ===
+Hamming Loss    : 0.037500
+Subset Accuracy : 0.7250
+Micro F1        : 0.8776
+Macro F1        : 0.8440
+
+PER-CLASS  (t=0.5)
+Category                   Precision     Recall         F1    Support
+-----------------------------------------------------------------
+billing_issue                 1.0000     0.9375     0.9677         16
+cleanliness_issue             0.5000     0.2857     0.3636         14
+electrical_issue              0.9375     0.9375     0.9375         16
+food_issue                    1.0000     0.8519     0.9200         27
+furniture_issue               0.9091     0.6667     0.7692         15
+internet_issue                0.9583     0.9583     0.9583         24
+noise_issue                   0.9524     0.8696     0.9091         23
+plumbing_issue                0.9500     0.9048     0.9268         21
+
+=== LSTM URGENCY CLASSIFIER (120 test samples) ===
+Accuracy    : 0.9750
+Macro F1    : 0.9687
+Weighted F1 : 0.9748
+
+Confusion Matrix:
+               Pred_low   Pred_med  Pred_high
+True_low             36          0          0
+True_medium           0         61          1
+True_high             0          2         20
+
+Per-class (Urgency LSTM):
+Class         Precision     Recall         F1
+---------------------------------------------
+low              1.0000     1.0000     1.0000
+medium           0.9683     0.9839     0.9760
+high             0.9524     0.9091     0.9302
+
+=== 5-FOLD CV: Logistic Regression (issue, macro F1) ===
+Note: CV uses full 597-sample dataset to get unbiased estimate.
+  Fold 1: Macro F1=0.9514  Micro F1=0.9553  Hamming=0.013542
+  Fold 2: Macro F1=0.9390  Micro F1=0.9416  Hamming=0.018750
+  Fold 3: Macro F1=0.9062  Micro F1=0.9184  Hamming=0.025210
+  Fold 4: Macro F1=0.9487  Micro F1=0.9488  Hamming=0.015756
+  Fold 5: Macro F1=0.9252  Micro F1=0.9281  Hamming=0.021008
+  MEAN: Macro F1=0.9341 (+/-0.0167)
+  MEAN: Micro F1=0.9384 (+/-0.0135)
+  MEAN: Hamming =0.018853 (+/-0.004071)
+
+=== 5-FOLD CV: Naive Bayes (urgency, weighted F1) ===
+  Fold scores: [0.9582, 0.95, 0.9492, 0.9145, 0.9489]
+  MEAN weighted F1 = 0.9442 (+/-0.0152)
+
+=== HEAD-TO-HEAD: LR vs LSTM (120 test samples) ===
+Metric                  LR (Baseline)             LSTM
+-------------------------------------------------------
+Hamming Loss                 0.019792         0.021008
+Subset Accuracy                0.8417           0.7250
+Macro F1                       0.9230           0.9252
+Micro F1                       0.9365           0.9281
+
+Per-class F1 comparison:
+Category                       LR F1    LSTM F1     Winner
+-------------------------------------------------------
+billing_issue                 1.0000     0.9677         LR
+cleanliness_issue             0.6957     0.3636         LR
+electrical_issue              0.8750     0.9375       LSTM
+food_issue                    0.9615     0.9200         LR
+furniture_issue               0.9655     0.7692         LR
+internet_issue                0.9565     0.9583       LSTM
+noise_issue                   0.9545     0.9091         LR
+plumbing_issue                0.9756     0.9268         LR

@@ -1,0 +1,38 @@
+=== THRESHOLD BEHAVIOR ===
+Thresholds 0.85/0.65: AutoRoute=28(23.3%) Review=76(63.3%) Ignored=16(13.3%) Correct=28 Wrong=0 ErrorRate=0.00%
+Thresholds 0.65/0.5: AutoRoute=104(86.7%) Review=16(13.3%) Ignored=0(0.0%) Correct=104 Wrong=0 ErrorRate=0.00%
+Thresholds 0.5/0.0: AutoRoute=120(100.0%) Review=0(0.0%) Ignored=0(0.0%) Correct=119 Wrong=1 ErrorRate=0.83%
+Argmax: AutoRoute=120(100%) Correct=119 Wrong=1 ErrorRate=0.83%
+=== PER-CLASS (Issue LR, t=0.5) ===
+billing_issue: P=1.0000 R=1.0000 F1=1.0000 Sup=16
+cleanliness_issue: P=0.8889 R=0.5714 F1=0.6957 Sup=14
+electrical_issue: P=0.8750 R=0.8750 F1=0.8750 Sup=16
+food_issue: P=1.0000 R=0.9259 F1=0.9615 Sup=27
+furniture_issue: P=1.0000 R=0.9333 F1=0.9655 Sup=15
+internet_issue: P=1.0000 R=0.9167 F1=0.9565 Sup=24
+noise_issue: P=1.0000 R=0.9130 F1=0.9545 Sup=23
+plumbing_issue: P=1.0000 R=0.9524 F1=0.9756 Sup=21
+=== CONFUSION MATRIX (Urgency NB) ===
+         low  medium  high
+True_low:  35      1      0
+True_medium:   0     62      0
+True_high:   0      5     17
+=== HAMMING LOSS vs THRESHOLD ===
+t=0.30: HammingLoss=0.095833 SubsetAcc=0.4500
+t=0.40: HammingLoss=0.016667 SubsetAcc=0.8667
+t=0.50: HammingLoss=0.019792 SubsetAcc=0.8417
+t=0.60: HammingLoss=0.033333 SubsetAcc=0.7583
+t=0.65: HammingLoss=0.050000 SubsetAcc=0.6667
+t=0.70: HammingLoss=0.066667 SubsetAcc=0.5917
+t=0.80: HammingLoss=0.108333 SubsetAcc=0.3750
+t=0.85: HammingLoss=0.133333 SubsetAcc=0.2000
+=== COVERAGE-RISK KEY POINTS ===
+t=0.50: Coverage=100.0% Precision=99.17% Risk=0.83% n=120
+t=0.60: Coverage=95.0% Precision=99.12% Risk=0.88% n=114
+t=0.65: Coverage=86.7% Precision=100.00% Risk=0.00% n=104
+t=0.70: Coverage=75.8% Precision=100.00% Risk=0.00% n=91
+t=0.75: Coverage=63.3% Precision=100.00% Risk=0.00% n=76
+t=0.80: Coverage=43.3% Precision=100.00% Risk=0.00% n=52
+t=0.85: Coverage=23.3% Precision=100.00% Risk=0.00% n=28
+t=0.90: Coverage=10.8% Precision=100.00% Risk=0.00% n=13
+t=0.95: Coverage=0.8% Precision=100.00% Risk=0.00% n=1

@@ -13,9 +13,18 @@ def get_db_connection():
 
 def init_db():
     """Initialize the database with the schema and run migrations"""
+    print("Initializing Database...")
     schema = """
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'student',
+        profile_info TEXT
+    );
     CREATE TABLE IF NOT EXISTS complaints (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
         student_name TEXT NOT NULL,
         student_id TEXT,
         room_number TEXT,
@@ -36,7 +45,10 @@ def init_db():
         corrected_team TEXT,
         review_notes TEXT,
         review_timestamp TEXT,
-        timestamp TEXT NOT NULL
+        rating INTEGER,
+        feedback TEXT,
+        timestamp TEXT NOT NULL,
+        FOREIGN KEY(user_id) REFERENCES users(id)
     );
     CREATE TABLE IF NOT EXISTS assignments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +64,7 @@ def init_db():
     """
     
     with get_db_connection() as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.executescript(schema)
         
         # Migration: Add new columns if they don't exist
@@ -66,21 +79,24 @@ def init_db():
             ("corrected_urgency", "TEXT"),
             ("corrected_team", "TEXT"),
             ("review_notes", "TEXT"),
-            ("review_timestamp", "TEXT")
+            ("review_timestamp", "TEXT"),
+            ("user_id", "INTEGER"),
+            ("rating", "INTEGER"),
+            ("feedback", "TEXT")
         ]
         
         for col_name, col_type in columns_to_add:
             try:
                 cursor.execute(f"SELECT {col_name} FROM complaints LIMIT 1")
             except sqlite3.OperationalError:
-                print(f"Migrating: Adding {col_name} column...")
-                cursor.execute(f"ALTER TABLE complaints ADD COLUMN {col_name} {col_type}")
+                try:
+                    print(f"Migrating: Adding {col_name} column...")
+                    cursor.execute(f"ALTER TABLE complaints ADD COLUMN {col_name} {col_type}")
+                except sqlite3.OperationalError as e:
+                    print(f"Skipping {col_name}: {e}")
             
         conn.commit()
-
-        conn.commit()
-
-        conn.commit()
+    print("Database Initialization Complete.")
 
 def init_assignments_table():
     """Create (migrate) the assignments table if it doesn't exist"""
@@ -167,74 +183,77 @@ def get_decision_queue() -> List[Dict[str, Any]]:
              
     final_queue = []
     
+    final_queue_map = {}
+    
     for c in candidates:
         try: 
-            issues = json.loads(c['predicted_issues'])
-            scores = json.loads(c['confidence_scores'])
-        except: 
+            issues_json = c.get('predicted_issues')
+            scores_json = c.get('confidence_scores')
+            issues = json.loads(issues_json) if issues_json else []
+            scores = json.loads(scores_json) if scores_json else {}
+        except Exception as e:
+            print(f"Error parsing JSON for complaint {c.get('id')}: {e}")
             issues = []
             scores = {}
             
         # Get existing assignments to filter out handled issues
-        # Check if an assignment exists for this TEAM (proxy for issue)
-        existing_assignments = get_assignments_for_complaint(c['id'])
+        existing_assignments = get_assignments_map_for_complaint(c.get('id', 0))
         assigned_teams = {a['team'] for a in existing_assignments}
         
         # Check ignored issues from admin_notes/review_notes
-        ignored_notes = (c.get('admin_notes') or '') + (c.get('review_notes') or '')
+        ignored_notes = (str(c.get('admin_notes') or '')) + (str(c.get('review_notes') or ''))
         
-        if not issues:
-             # Fallback: if no issues detected but status is pending/sent, maybe show it?
-             # For multi-issue logic, we rely on detected issues. If none, maybe manual review of text needed.
-             # Only show if no assignments at all.
-             if not existing_assignments and c['status'] == 'SENT':
-                 item = c.copy()
-                 item['review_issue'] = "Unclassified"
-                 item['review_confidence'] = 0.0
-                 item['suggested_team'] = "Hostel Administration"
-                 final_queue.append(item)
+        # Complaint-level list for grouped display
+        pending_for_this_complaint = []
+        
+        # If no issues detected but status is SENT, add as "Unclassified"
+        if not issues and c.get('status') == 'SENT' and not existing_assignments:
+             pending_for_this_complaint.append({
+                 'issue': 'Unclassified',
+                 'confidence': 0.0,
+                 'suggested_team': 'Hostel Administration'
+             })
         
         for issue in issues:
             conf = scores.get(issue, 0)
             team = get_team_name(issue)
             
-            # CHECK IGNORED STATUS based on text log (Simple persistence without schema change)
             if f"IGNORED_ISSUE: {issue}" in ignored_notes:
                 continue
 
-            # LOGIC: 
-            # If >= 0.85 -> Should have been auto-assigned. If not assigned, show in queue?
-            # User Rule: "Confidence 65%-84% -> Queue". 
-            # If < 0.65 -> Ignore.
+            # LOGIC: 0.30 <= conf < 0.85 -> Queue
+            # Fallback: if >= 0.85 but no assignment exists
+            if (0.30 <= conf < 0.85 or conf >= 0.85) and team not in assigned_teams:
+                pending_for_this_complaint.append({
+                    'issue': issue,
+                    'confidence': conf,
+                    'suggested_team': team
+                })
+        
+        if pending_for_this_complaint:
+            item = dict(c)
+            item['pending_issues'] = pending_for_this_complaint
+            # For backward compatibility with simpler templates, set primary fields
+            item['review_issue'] = pending_for_this_complaint[0]['issue']
+            item['review_confidence'] = pending_for_this_complaint[0]['confidence']
+            item['suggested_team'] = pending_for_this_complaint[0]['suggested_team']
             
-            # We strictly follow the Review Range or if High Conf failed to assign.
-            needs_review = False
+            final_queue_map[c['id']] = item
             
-            if 0.65 <= conf < 0.85:
-                needs_review = True
-            elif conf >= 0.85:
-                 # Should be auto-assigned. If not, put in queue as fallback.
-                 needs_review = True
-            
-            if needs_review and team not in assigned_teams:
-                # Create a specific Queue Item for this issue
-                item = c.copy()
-                item['review_issue'] = issue
-                item['review_confidence'] = conf
-                item['suggested_team'] = team
-                # Calculate urgency based on strictly this issue? 
-                # For now keep ticket urgency but maybe we can refine later.
-                final_queue.append(item)
-            
-    print("Decision queue count:", len(final_queue))
+    final_queue = list(final_queue_map.values())
+    print(f"Decision queue built: {len(final_queue)} unique complaints")
     return final_queue
 
-def get_assignments_for_complaint(complaint_id: int) -> List[Dict[str, Any]]:
+def get_assignments_map_for_complaint(complaint_id: int) -> List[Dict[str, Any]]:
     """Helper to get assignments for a specific ID quickly"""
+    if not complaint_id: return []
     query = "SELECT * FROM assignments WHERE complaint_id = ?"
-    with get_db_connection() as conn:
-        rows = conn.execute(query, (complaint_id,)).fetchall()
-        return [dict(r) for r in rows]
+    try:
+        with get_db_connection() as conn:
+            rows = conn.execute(query, (complaint_id,)).fetchall()
+            return [dict(r) for r in rows]
+    except:
+        return []
 
 def update_assignment_status(assignment_id: int, status: str, notes: Optional[str] = None) -> bool:
     """Update assignment status"""
@@ -250,18 +269,23 @@ def update_assignment_status(assignment_id: int, status: str, notes: Optional[st
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query, args)
+        
+        # AUTO-SYNC LOGIC:
+        # If this assignment was resolved, check if all others for this complaint are also resolved.
+        if status.upper() == 'RESOLVED':
+            # Get the complaint_id for this assignment
+            res = cursor.execute("SELECT complaint_id FROM assignments WHERE id = ?", (assignment_id,)).fetchone()
+            if res:
+                cid = res[0]
+                # Check all assignments for this CID
+                all_assigns = cursor.execute("SELECT status FROM assignments WHERE complaint_id = ?", (cid,)).fetchall()
+                if all(a[0].upper() == 'RESOLVED' for a in all_assigns):
+                    # Auto-resolve parent complaint
+                    update_complaint_status(cid, 'RESOLVED', "Automatically resolved as all assigned tasks are complete.")
+        
         conn.commit()
         return cursor.rowcount > 0
 
-def init_db():
-    print("Initializing DB...")
-    # call original init logic manually here to ensure schema is updated
-    # ... (see replacement above) ...
-    pass 
-
-if __name__ == "__main__":
-    # We redefined init_db inside the replacement block partially, so let's just run the block
-    pass
 
 def add_complaint(data: Dict[str, Any]) -> int:
     """
@@ -275,16 +299,17 @@ def add_complaint(data: Dict[str, Any]) -> int:
     
     query = """
     INSERT INTO complaints (
-        student_name, student_id, room_number, complaint_text, 
+        user_id, student_name, student_id, room_number, complaint_text, 
         predicted_issues, predicted_urgency, confidence_scores,
         routing_decision, routed_team, model_type, assignment_source, 
         status, timestamp
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query, (
+            data.get('user_id'),
             data['student_name'],
             data.get('student_id', ''),
             data.get('room_number', ''),
@@ -302,16 +327,28 @@ def add_complaint(data: Dict[str, Any]) -> int:
         conn.commit()
         return cursor.lastrowid
 
-def get_all_complaints() -> List[Dict[str, Any]]:
-    """Retrieve all complaints from the database ordered by timestamp desc"""
-    query = "SELECT * FROM complaints ORDER BY id DESC"
+def get_all_complaints(user_id: Optional[int] = None, hide_sensitive: bool = False) -> List[Dict[str, Any]]:
+    """Retrieve complaints, optionally filtered by user_id"""
+    query = "SELECT * FROM complaints"
+    args = []
+    if user_id:
+        query += " WHERE user_id = ?"
+        args.append(user_id)
+        
+    query += " ORDER BY id DESC"
     
     complaints = []
     with get_db_connection() as conn:
-        rows = conn.execute(query).fetchall()
+        rows = conn.execute(query, args).fetchall()
         for row in rows:
             # Convert row to dict
             item = dict(row)
+            
+            if hide_sensitive:
+                # Remove sensitive fields for student view
+                item['confidence_scores'] = {}
+                item['routing_decision'] = "Pending" if item['status'] == 'SENT' else item['status']
+                item['routed_team'] = "Privacy Masked" # Or just hide in UI
             # Parse JSON fields
             try:
                 item['predicted_issues'] = json.loads(item['predicted_issues'])
@@ -329,6 +366,14 @@ def get_all_complaints() -> List[Dict[str, Any]]:
                     item['corrected_issues'] = json.loads(item['corrected_issues'])
                 except:
                     item['corrected_issues'] = []
+            
+            # Fetch associated assignments for a complete progress view
+            if hide_sensitive:
+                item['assignments'] = get_assignments_map_for_complaint(item['id'])
+                # Summarize status: If any assignment is NOT resolved, main status is 'IN PROGRESS'
+                # but we respect 'RESOLVED' if explicitly set. 
+                # For simplified status in UI:
+                item['routing_decision'] = "Assigned" if item['assignments'] else "Pending Review"
                 
             complaints.append(item)
             
@@ -408,6 +453,15 @@ def override_complaint_routing(complaint_id: int, data: Dict[str, Any]) -> bool:
         ))
         conn.commit()
         return cursor.rowcount > 0
+
+def update_complaint_feedback(complaint_id: int, rating: int, feedback: str):
+    """Update rating and feedback for a complaint"""
+    with get_db_connection() as conn:
+        conn.execute(
+            "UPDATE complaints SET rating = ?, feedback = ? WHERE id = ?",
+            (rating, feedback, complaint_id)
+        )
+        conn.commit()
 
 def get_dashboard_stats() -> Dict[str, int]:
     """Get dashboard statistics from database"""

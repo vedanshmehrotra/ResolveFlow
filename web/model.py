@@ -153,7 +153,7 @@ def get_keyword_fallbacks(text_lower: str, categories: List[str]) -> np.ndarray:
     ]
     if any(kw in text_lower for kw in electrical_keywords):
         if 'electrical_issue' in categories:
-            fallback_issues[categories.index('electrical_issue')] = 0.7
+            fallback_issues[categories.index('electrical_issue')] = 0.8
     
     # Noise
     noise_keywords = [
@@ -162,13 +162,13 @@ def get_keyword_fallbacks(text_lower: str, categories: List[str]) -> np.ndarray:
     ]
     if any(kw in text_lower for kw in noise_keywords):
         if 'noise_issue' in categories:
-            fallback_issues[categories.index('noise_issue')] = 0.7
+            fallback_issues[categories.index('noise_issue')] = 0.8
             
     # Cleanliness
     clean_keywords = ['mess', 'dirty', 'filthy', 'unclean', 'trash', 'garbage', 'rubbish', 'cleaning']
     if any(kw in text_lower for kw in clean_keywords):
         if 'cleanliness_issue' in categories:
-            fallback_issues[categories.index('cleanliness_issue')] = 0.6
+            fallback_issues[categories.index('cleanliness_issue')] = 0.75
             
     return fallback_issues
 
@@ -178,7 +178,7 @@ def get_team_name(category: str) -> str:
         'electrical_issue': 'Electrical Team',
         'internet_issue': 'IT / Network Team',
         'plumbing_issue': 'Plumbing Team',
-        'furniture_issue': 'Housekeeping Team',
+        'furniture_issue': 'Furniture & Infrastructure Team',
         'cleanliness_issue': 'Housekeeping Team',
         'food_issue': 'Mess Management',
         'noise_issue': 'Hostel Administration',
@@ -194,6 +194,7 @@ def get_all_teams() -> List[str]:
         'Electrical Team',
         'Plumbing Team', 
         'IT / Network Team',
+        'Furniture & Infrastructure Team',
         'Housekeeping Team',
         'Mess Management',
         'Hostel Administration',
@@ -350,10 +351,10 @@ def route_complaint(text: str, model_type: str = 'ML') -> Dict[str, Any]:
     if best_category:
         target_team = get_team_name(best_category)
         
-        if max_conf >= 0.85:
+        if max_conf >= 0.75:
             routing_action = "AUTO-ROUTE"
             routing_desc = f"High confidence ({max_conf:.0%}) - Auto-routed to {target_team}"
-        elif max_conf >= 0.65:
+        elif max_conf >= 0.55:
             routing_action = "HUMAN REVIEW"
             routing_desc = f"Medium confidence ({max_conf:.0%}) - Flagged for review"
         else:

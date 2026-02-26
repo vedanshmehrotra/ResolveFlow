@@ -15,42 +15,51 @@
 
 <body class="bg-gray-900 text-gray-100 min-h-screen font-inter flex flex-col">
 
-    <!-- Navbar -->
-    <nav class="bg-gray-800 border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <span class="text-xl font-bold text-gray-100 flex items-center gap-2">
-                        <span>Decision Queue</span> <span class="text-gray-500 text-sm font-medium">| Admin
-                            Review</span>
-                    </span>
-                    <div class="ml-10 flex space-x-4">
-                        <a href="/assignments"
-                            class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Operations</a>
-                        <a href="/admin"
-                            class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Audit</a>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <form action="/decision-queue" method="GET" class="flex items-center">
-                        <div class="bg-gray-700 rounded-md p-1 flex items-center border border-gray-600">
-                            <span class="text-xs text-gray-400 px-2 uppercase font-bold">Filter:</span>
-                            <select name="priority" onchange="this.form.submit()"
-                                class="bg-transparent text-sm text-gray-200 focus:outline-none cursor-pointer pr-2">
-                                <option value="" class="bg-gray-800">All Priorities</option>
-                                <option value="high" class="bg-gray-800" {% if active_priority=='high' %}selected{%
-                                    endif %}>High</option>
-                                <option value="medium" class="bg-gray-800" {% if active_priority=='medium' %}selected{%
-                                    endif %}>Medium</option>
-                                <option value="low" class="bg-gray-800" {% if active_priority=='low' %}selected{% endif
-                                    %}>Low</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- Header with Consolidated Navigation -->
+    <header
+        class="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8 shadow-sm z-10 shrink-0">
+        <div class="flex items-center gap-8">
+            <h2 class="text-lg font-semibold text-gray-100 flex items-center gap-2">
+                <span class="text-xl">📋</span> Decision Queue <span class="text-gray-600 text-sm font-normal ml-2">|
+                    Admin Review</span>
+            </h2>
+
+            <nav class="flex items-center space-x-1">
+                <a href="/assignments"
+                    class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
+                    Operations Console
+                </a>
+                <a href="/admin"
+                    class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
+                    Audit Log
+                </a>
+            </nav>
         </div>
-    </nav>
+
+        <div class="flex items-center gap-4">
+            <div class="flex items-center">
+                <form action="/decision-queue" method="GET" class="flex items-center">
+                    <div class="bg-gray-800 rounded-md p-1 flex items-center border border-gray-700">
+                        <span class="text-[10px] text-gray-500 px-2 uppercase font-bold tracking-widest">Filter
+                            Priority:</span>
+                        <select name="priority" onchange="this.form.submit()"
+                            class="bg-transparent text-xs text-gray-300 focus:outline-none cursor-pointer pr-2 hover:text-white transition-colors">
+                            <option value="" class="bg-gray-800">All</option>
+                            <option value="high" class="bg-gray-800" {% if active_priority=='high' %}selected{% endif
+                                %}>High</option>
+                            <option value="medium" class="bg-gray-800" {% if active_priority=='medium' %}selected{%
+                                endif %}>Medium</option>
+                            <option value="low" class="bg-gray-800" {% if active_priority=='low' %}selected{% endif %}>
+                                Low</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="h-6 w-px bg-gray-800 mx-2"></div>
+            <a href="/logout"
+                class="text-gray-500 hover:text-red-400 text-xs font-bold uppercase tracking-widest transition-colors">Logout</a>
+        </div>
+    </header>
 
     <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
@@ -83,29 +92,44 @@
 
                     <!-- Footer Tags & Actions -->
                     <div class="flex items-center justify-between mt-4 border-t border-gray-700 pt-4">
-                        <div class="flex items-center gap-3">
-                            <!-- Specific Review Issue Tag -->
-                            <div class="flex items-center bg-gray-700 rounded-md px-2 py-1 border border-gray-600">
-                                <span class="text-xs font-bold text-teal-400 mr-2">{{ (c.review_issue or
-                                    'Unknown').replace('_', ' ').title() }}</span>
-                                <span class="text-[10px] text-gray-400 font-mono">Conf: {{ ((c.review_confidence or
-                                    0)*100)|int }}%</span>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <!-- All Pending Issues -->
+                            {% for pi in c.pending_issues %}
+                            <div
+                                class="flex items-center bg-gray-700/50 rounded-md px-2 py-1 border border-gray-600/50">
+                                <span class="text-xs font-bold text-teal-400 mr-2">{{ pi.issue.replace('_', ' ').title()
+                                    }}</span>
+                                <span class="text-[10px] text-gray-400 font-mono">{{ (pi.confidence * 100)|int
+                                    }}%</span>
+                                <button onclick="ignoreIssue({{ c.id }}, '{{ pi.issue }}')"
+                                    class="ml-2 text-gray-500 hover:text-red-400 transition-colors"
+                                    title="Mark this issue as invalid">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
+                            {% endfor %}
 
-                            <span class="text-[10px] text-gray-500 uppercase tracking-widest font-semibold ml-2">
-                                Suggested: {{ c.suggested_team }}
+                            <span class="text-[10px] text-gray-600 uppercase tracking-widest font-bold ml-1">
+                                ➔ Suggestion:
+                                <span class="text-gray-400 italic">
+                                    {% set teams = [] %}
+                                    {% for pi in c.pending_issues %}
+                                    {% if pi.suggested_team not in teams %}
+                                    {% set _ = teams.append(pi.suggested_team) %}
+                                    {% endif %}
+                                    {% endfor %}
+                                    {{ teams|join(', ') }}
+                                </span>
                             </span>
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <button onclick="ignoreIssue({{ c.id }}, '{{ c.review_issue }}')"
-                                class="text-xs text-gray-500 hover:text-red-400 px-2 py-1 transition-colors border border-transparent hover:border-red-900/30 rounded">
-                                Mark Invalid
-                            </button>
-
                             <a href="/triage?id={{ c.id }}"
-                                class="bg-[#2A9D8F] hover:bg-[#21867a] text-white px-4 py-1.5 rounded text-sm font-medium shadow-sm transition-all transform hover:translate-y-px">
-                                Review & Assign
+                                class="bg-[#2A9D8F] hover:bg-[#21867a] text-white px-5 py-2 rounded shadow-lg text-sm font-semibold transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                                Review & Assign Full Ticket
                             </a>
                         </div>
                     </div>
