@@ -2,8 +2,9 @@ import sqlite3
 import datetime
 from typing import List, Dict, Optional, Any
 import json
+import os
 
-DB_PATH = 'web/complaints.db'
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'complaints.db')
 
 def get_db_connection():
     """Create a database connection"""
