@@ -13,6 +13,18 @@ document.addEventListener('DOMContentLoaded', () => {
         backdrop.addEventListener('click', () => {
             sidebar.classList.add('-translate-x-full');
             backdrop.classList.add('hidden');
+            document.body.style.overflow = '';
+        });
+
+        // Close sidebar when a nav link is clicked (mobile)
+        document.querySelectorAll('aside nav a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    sidebar.classList.add('-translate-x-full');
+                    backdrop.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            });
         });
     }
 
@@ -36,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                
+
                 const filter = tab.dataset.filter.toUpperCase();
                 const rows = document.querySelectorAll('.assignment-row');
                 rows.forEach(row => {
@@ -62,7 +74,7 @@ function showInputError(inputEl, message) {
         inputEl.parentNode.insertBefore(errorP, inputEl.nextSibling);
     }
     errorP.textContent = message;
-    
+
     inputEl.addEventListener('focus', () => {
         inputEl.classList.remove('border-danger');
         if (errorP) errorP.remove();

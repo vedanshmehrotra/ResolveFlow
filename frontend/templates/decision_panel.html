@@ -513,6 +513,32 @@ Triage Queue
 
         // Uncheck all override checkboxes
         document.querySelectorAll('input[name="override_team"]').forEach(cb => cb.checked = false);
+
+        // Mobile panel switching
+        if (window.innerWidth < 768) {
+            document.querySelector('.ticket-list').classList.add('mobile-hidden');
+            const detailPanel = document.querySelector('.detail-panel');
+            detailPanel.classList.add('mobile-active');
+
+            // Inject back button if not already present
+            if (!document.getElementById('mobileBackBtn')) {
+                const backBtn = document.createElement('button');
+                backBtn.id = 'mobileBackBtn';
+                backBtn.className = 'mobile-back-btn';
+                backBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Queue`;
+                backBtn.onclick = function () {
+                    document.querySelector('.ticket-list').classList.remove('mobile-hidden');
+                    detailPanel.classList.remove('mobile-active');
+                    backBtn.remove();
+                };
+                detailPanel.prepend(backBtn);
+            }
+        }
     }
 
     async function approveTicket() {

@@ -279,7 +279,7 @@
                                         {% if a.status == 'SENT' %}status-sent
                                         {% elif a.status == 'IN_PROGRESS' %}status-inprogress
                                         {% elif a.status == 'RESOLVED' %}status-resolved{% endif %}">
-                                        {{ a.status }}
+                                        {{ a.status.replace('_', ' ') }}
                                     </span>
                                 </div>
                                 {% else %}

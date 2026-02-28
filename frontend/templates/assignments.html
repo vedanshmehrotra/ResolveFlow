@@ -151,27 +151,53 @@
 {% block page_title %}Operations Console{% endblock %}
 
 {% block header_actions %}
-<div class="flex gap-2">
-    <button onclick="filterTasks('ALL')" class="filter-tab active" data-filter="ALL">All Tasks</button>
-    <button onclick="filterTasks('OPEN')" class="filter-tab" data-filter="OPEN">Open</button>
-    <button onclick="filterTasks('IN_PROGRESS')" class="filter-tab" data-filter="IN_PROGRESS">Progress</button>
-    <button onclick="filterTasks('RESOLVED')" class="filter-tab" data-filter="RESOLVED">Resolved</button>
-</div>
 {% endblock %}
 
 {% block content %}
+<div style="padding: 16px;">
+    <!-- Filter tabs row -->
+    <div style="display: flex; gap: 2px; padding: 0 0 12px 0;
+       overflow-x: auto; -webkit-overflow-scrolling: touch;
+       scrollbar-width: none; border-bottom: 1px solid var(--border-subtle);">
+        <button class="filter-tab active" data-filter="ALL" style="padding: 6px 16px; font-size: 12px; font-weight: 500;
+                   border-radius: var(--radius-sm); border: none;
+                   background: var(--accent-dim); color: var(--accent);
+                   font-family: 'Inter', sans-serif; cursor: pointer;
+                   white-space: nowrap; flex-shrink: 0;
+                   transition: all 150ms ease;" onclick="filterTasks('ALL')">All</button>
+        <button class="filter-tab" data-filter="OPEN" style="padding: 6px 16px; font-size: 12px; font-weight: 500;
+                   border-radius: var(--radius-sm); border: none;
+                   background: transparent; color: var(--text-secondary);
+                   font-family: 'Inter', sans-serif; cursor: pointer;
+                   white-space: nowrap; flex-shrink: 0;
+                   transition: all 150ms ease;" onclick="filterTasks('OPEN')">Open</button>
+        <button class="filter-tab" data-filter="IN_PROGRESS" style="padding: 6px 16px; font-size: 12px; font-weight: 500;
+                   border-radius: var(--radius-sm); border: none;
+                   background: transparent; color: var(--text-secondary);
+                   font-family: 'Inter', sans-serif; cursor: pointer;
+                   white-space: nowrap; flex-shrink: 0;
+                   transition: all 150ms ease;" onclick="filterTasks('IN_PROGRESS')">In Progress</button>
+        <button class="filter-tab" data-filter="RESOLVED" style="padding: 6px 16px; font-size: 12px; font-weight: 500;
+                   border-radius: var(--radius-sm); border: none;
+                   background: transparent; color: var(--text-secondary);
+                   font-family: 'Inter', sans-serif; cursor: pointer;
+                   white-space: nowrap; flex-shrink: 0;
+                   transition: all 150ms ease;" onclick="filterTasks('RESOLVED')">Resolved</button>
+    </div>
+</div>
 <div id="assignments-list">
     {% set ns = namespace(current_team=None) %}
     {% for a in assignments|sort(attribute='team') %}
     {% if a.team != ns.current_team %}
-    {% set ns.current_team = a.team %}
-    {% set team_count = assignments|selectattr('team', 'equalto', a.team)|list|length %}
+    {% if ns.current_team is not none %}</div>{% endif %}
+{% set ns.current_team = a.team %}
+{% set team_count = assignments|selectattr('team', 'equalto', a.team)|list|length %}
+<div class="team-group">
     <div class="team-header">
         <div style="display:flex; align-items:center; gap:10px;">
             <div style="width:3px; height:14px; background:var(--accent); border-radius:2px;"></div>
-            <span class="team-header-name">{{ a.team }} ({{ team_count }})</span>
+            <span class="team-header-name">{{ a.team }} (<span class="team-count">{{ team_count }}</span>)</span>
         </div>
-        <span class="text-[10px] bg-elevated px-2 py-0.5 rounded border border-subtle text-muted">ACTIVE TEAM</span>
     </div>
     {% endif %}
 
@@ -199,15 +225,33 @@
         <div class="flex-1">
             <p class="text-[14px] font-medium text-primary mb-1">{{ team_issue_map.get(a.team, a.team) }}</p>
             <div class="assignment-notes mt-2">
-                <button onclick="toggleNote(this)" class="text-xs text-[#2A9D8F] hover:underline focus:outline-none">
+                <button onclick="toggleNote(this)" class="note-toggle-btn text-xs font-medium" style="color: var(--accent); background: none; border: none;
+                       cursor: pointer; padding: 0; font-family: 'Inter', sans-serif;">
                     + Add Note
                 </button>
                 <div class="note-field hidden mt-2">
                     <textarea data-assignment-id="{{ a.id }}" placeholder="Add a note for this ticket..." rows="2"
-                        class="w-full text-xs px-3 py-2 rounded border border-[rgba(255,255,255,0.12)]
-                         bg-[#1c2128] text-[#e6edf3] placeholder-[#484f58]
-                         focus:outline-none focus:border-[#2A9D8F] resize-none"
-                        onblur="saveNote(this)">{{ a.notes or '' }}</textarea>
+                        style="width: 100%; font-size: 12px; padding: 8px 10px;
+                         border-radius: var(--radius-sm);
+                         border: 1px solid var(--border-default);
+                         background: var(--bg-surface);
+                         color: var(--text-primary);
+                         font-family: 'Inter', sans-serif;
+                         resize: none; outline: none;
+                         transition: border-color 150ms ease;
+                         box-sizing: border-box;" onfocus="this.style.borderColor='var(--accent)'"
+                        onblur="this.style.borderColor='var(--border-default)'">{{ a.notes or '' }}</textarea>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+                        <button onclick="saveNote(this)" style="font-size: 12px; font-weight: 600; padding: 4px 14px;
+                           background: var(--accent); color: white; border: none;
+                           border-radius: var(--radius-sm); cursor: pointer;
+                           font-family: 'Inter', sans-serif;
+                           transition: background 150ms ease;"
+                            onmouseover="this.style.background='var(--accent-hover)'"
+                            onmouseout="this.style.background='var(--accent)'">Save</button>
+                        <span class="note-save-status"
+                            style="font-size: 11px; color: var(--text-muted); display: none;">Saved</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -220,51 +264,54 @@
             </select>
         </div>
     </div>
-    {% endfor %}
+</div>
+{% endfor %}
+{% if ns.current_team is not none %}</div>{% endif %}
 
-    {% if not assignments %}
-    <div class="py-32 flex flex-col items-center justify-center text-center">
-        <div class="text-4xl mb-4">✅</div>
-        <p class="text-secondary font-bold">No tasks assigned</p>
-        <p class="text-muted text-sm mt-1">Excellent! All teams have clear boards.</p>
-    </div>
-    {% endif %}
+{% if not assignments %}
+<div class="py-32 flex flex-col items-center justify-center text-center">
+    <div class="text-4xl mb-4">✅</div>
+    <p class="text-secondary font-bold">No tasks assigned</p>
+    <p class="text-muted text-sm mt-1">Excellent! All teams have clear boards.</p>
+</div>
+{% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     function filterTasks(filter) {
-        // Update tabs
+        // Update tabs — toggle active styling
         document.querySelectorAll('.filter-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.filter === filter);
+            const isActive = tab.dataset.filter === filter;
+            tab.classList.toggle('active', isActive);
+            tab.style.background = isActive ? 'var(--accent-dim)' : 'transparent';
+            tab.style.color = isActive ? 'var(--accent)' : 'var(--text-secondary)';
         });
 
-        // Update rows
-        const rows = document.querySelectorAll('.assignment-row');
-        rows.forEach(row => {
-            const status = row.dataset.status;
+        // Filter rows
+        const allRows = document.querySelectorAll('.assignment-row');
+        allRows.forEach(row => {
+            const status = (row.dataset.status || '').toUpperCase();
+            let visible = false;
             if (filter === 'ALL') {
-                row.style.display = 'flex';
+                visible = true;
             } else if (filter === 'OPEN') {
-                row.style.display = (status === 'SENT' || status === 'IN_PROGRESS') ? 'flex' : 'none';
+                visible = (status === 'SENT' || status === 'IN_PROGRESS');
             } else {
-                row.style.display = (status === filter) ? 'flex' : 'none';
+                visible = (status === filter);
             }
+            row.style.display = visible ? '' : 'none';
         });
 
-        // Hide empty team headers
-        document.querySelectorAll('.team-header').forEach(header => {
-            let next = header.nextElementSibling;
-            let hasVisible = false;
-            while (next && next.classList.contains('assignment-row')) {
-                if (next.style.display !== 'none') {
-                    hasVisible = true;
-                    break;
-                }
-                next = next.nextElementSibling;
-            }
-            header.style.display = hasVisible ? 'flex' : 'none';
+        // Update team groups — hide empty, update counts
+        document.querySelectorAll('.team-group').forEach(group => {
+            const visibleRows = group.querySelectorAll('.assignment-row');
+            let count = 0;
+            visibleRows.forEach(r => { if (r.style.display !== 'none') count++; });
+            group.style.display = count === 0 ? 'none' : '';
+            const countBadge = group.querySelector('.team-count');
+            if (countBadge) countBadge.textContent = count;
         });
     }
 
@@ -301,21 +348,49 @@
 
     function toggleNote(btn) {
         const field = btn.nextElementSibling;
-        field.classList.toggle('hidden');
-        btn.textContent = field.classList.contains('hidden') ? '+ Add Note' : '− Hide Note';
-        if (!field.classList.contains('hidden')) {
+        const isHidden = field.classList.contains('hidden');
+        field.classList.toggle('hidden', !isHidden);
+        btn.textContent = isHidden ? '− Hide Note' : '+ Add Note';
+        if (isHidden) {
             field.querySelector('textarea').focus();
         }
     }
 
-    async function saveNote(textarea) {
+    async function saveNote(saveBtn) {
+        const noteField = saveBtn.closest('.note-field');
+        const textarea = noteField.querySelector('textarea');
+        const statusEl = noteField.querySelector('.note-save-status');
         const assignmentId = textarea.dataset.assignmentId;
-        const notes = textarea.value;
-        await fetch(`/api/assignment/${assignmentId}/note`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ notes })
-        });
+        const notes = textarea.value.trim();
+
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/assignment/${assignmentId}/note`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes: notes })
+            });
+            const data = await res.json();
+            if (data.success) {
+                saveBtn.textContent = 'Save';
+                saveBtn.disabled = false;
+                statusEl.style.display = 'inline';
+                statusEl.textContent = '✓ Saved';
+                statusEl.style.color = 'var(--success)';
+                setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
+            } else {
+                throw new Error('Save failed');
+            }
+        } catch (err) {
+            saveBtn.textContent = 'Save';
+            saveBtn.disabled = false;
+            statusEl.style.display = 'inline';
+            statusEl.textContent = 'Failed to save';
+            statusEl.style.color = 'var(--danger)';
+            setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+        }
     }
 </script>
 {% endblock %}
