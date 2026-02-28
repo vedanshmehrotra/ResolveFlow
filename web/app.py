@@ -80,7 +80,7 @@ def home():
     """Render Student Portal with user's complaints"""
     # Fetch complaints only for this student
     complaints = get_all_complaints(user_id=current_user.id, hide_sensitive=True) if current_user.role != 'admin' else []
-    return render_template('student.html', user=current_user, complaints=complaints)
+    return render_template('student.html', user=current_user, complaints=complaints, is_student=True)
 
 @app.route('/admin')
 @login_required
@@ -100,7 +100,7 @@ def admin():
     # Get DB-derived stats
     stats = get_dashboard_stats()
         
-    return render_template('admin.html', complaints=complaints, assignments_map=assignments_map, stats=stats)
+    return render_template('admin.html', complaints=complaints, assignments_map=assignments_map, stats=stats, is_student=False)
 
 @app.route('/decision-queue')
 @login_required
@@ -115,7 +115,7 @@ def decision_queue_page():
     if priority_filter and priority_filter.lower() in ['high', 'medium', 'low']:
         queue = [c for c in queue if c.get('predicted_urgency', '').lower() == priority_filter.lower()]
         
-    return render_template('decision_panel.html', complaints=queue, active_priority=priority_filter)
+    return render_template('decision_panel.html', complaints=queue, active_priority=priority_filter, is_student=False, get_all_teams=get_all_teams)
 
 @app.route('/assignments')
 @login_required
@@ -132,7 +132,17 @@ def assignments_page():
     all_teams = get_active_teams()
     
     assignments = get_assignments(team_filter)
-    return render_template('assignments.html', assignments=assignments, active_team=team_filter, all_teams=all_teams)
+    TEAM_ISSUE_MAP = {
+        'Electrical Team': 'Electrical Issue',
+        'IT / Network Team': 'Network / Internet Issue',
+        'Plumbing Team': 'Plumbing Issue',
+        'Housekeeping Team': 'Housekeeping Issue',
+        'Furniture & Infrastructure Team': 'Furniture Issue',
+        'Mess Management': 'Mess Issue',
+        'Hostel Administration': 'Admin Issue',
+        'Accounts Department': 'Accounts Issue',
+    }
+    return render_template('assignments.html', assignments=assignments, active_team=team_filter, all_teams=all_teams, is_student=False, team_issue_map=TEAM_ISSUE_MAP)
 
 @app.route('/api/triage/ignore', methods=['POST'])
 def ignore_issue_route():
@@ -306,77 +316,68 @@ def rate_complaint():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-@app.route('/triage')
+@app.route('/api/override/<int:complaint_id>', methods=['POST'])
 @login_required
-def triage_page():
-    """Render Triage/Review Detail Page"""
+def override_complaint(complaint_id):
     if current_user.role != 'admin':
-        return redirect(url_for('home'))
-    complaint_id = request.args.get('id')
-    if not complaint_id:
-        return "Missing Complaint ID", 400
-    
-    complaint = get_complaint_by_id(complaint_id)
-    if not complaint:
-        return "Complaint not found", 404
+        return jsonify({'success': False}), 403
+    data = request.json
+    teams = data.get('teams', [])
+    if not teams:
+        return jsonify({'success': False, 'message': 'No teams provided'}), 400
         
-    all_teams = get_all_teams()
-    return render_template('triage.html', c=complaint, all_teams=all_teams)
-
-@app.route('/api/triage/override', methods=['POST'])
-def override_triage():
-    """Handle manual override of routing and create assignments"""
     try:
-        data = request.json
-        complaint_id = data.get('id')
-        corrected_teams = data.get('corrected_teams', []) 
-        corrected_issues = data.get('corrected_issues', [])
-        
-        if not complaint_id:
-            return jsonify({'success': False, 'message': 'Missing ID'}), 400
+        from database import update_complaint_status, create_assignment
+        with get_db_connection() as conn:
+            # Update complaint to OVERRIDDEN status directly in DB or use function
+            conn.execute("UPDATE complaints SET review_status = 'OVERRIDDEN', routing_decision = 'MANUAL_OVERRIDE' WHERE id = ?", (complaint_id,))
+            conn.commit()
             
-        # 1. Update Complaint Record
-        # We assume the UI sends the 'prmary' team or we join them.
-        # But data.corrected_team was a single string in DB schema. 
-        # For backward compatibility, we'll store the first team or joined string.
-        # But assignments details matter more. 
-        
-        data['corrected_team'] = ", ".join(corrected_teams)
-        
-        success = override_complaint_routing(complaint_id, data)
-        
-        if success:
-             # 2. Creates Assignments based on manual override
-             # We assume manual override means these are the definitive tasks.
-             # We should probably check if assignments already exist and 'void' them 
-             # or just create new ones. For MVP, we just create new ones.
-             
-             for team in corrected_teams:
-                  # Create a simplified assignment
-                  # We don't have per-team issue granularity from the simple override form 
-                  # unless the UI is complex. We'll assign "Manual Override" as label or first issue.
-                  label = corrected_issues[0] if corrected_issues else "Manual Issue"
-                  create_assignment(complaint_id, team, label, 1.0)
-                  
-             return jsonify({'success': True})
-        else:
-             return jsonify({'success': False, 'message': 'Override failed'}), 400
-             
+        for team in teams:
+            create_assignment(complaint_id, team, 'Manual Override', 1.0)
+            
+        return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/assignments/update', methods=['POST'])
-def update_assignment_status_route():
+@app.route('/api/reject/<int:complaint_id>', methods=['POST'])
+@login_required
+def reject_complaint(complaint_id):
+    if current_user.role != 'admin':
+        return jsonify({'success': False}), 403
+    try:
+        with get_db_connection() as conn:
+            conn.execute("UPDATE complaints SET review_status = 'REJECTED', routing_decision = 'REJECTED' WHERE id = ?", (complaint_id,))
+            conn.commit()
+        return jsonify({'success': True, 'id': complaint_id})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/assignment/<int:assignment_id>/note', methods=['POST'])
+@login_required
+def update_assignment_note(assignment_id):
+    data = request.get_json()
+    try:
+        with get_db_connection() as conn:
+            conn.execute("UPDATE assignments SET notes = ? WHERE id = ?", (data.get('notes', ''), assignment_id))
+            conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/assignment/<int:assignment_id>/status', methods=['POST'])
+@login_required
+def update_assignment_status_route(assignment_id):
     """Update assignment status"""
     try:
         data = request.json
-        assignment_id = data.get('assignment_id')
         new_status = data.get('status')
         notes = data.get('notes')
         
-        if not assignment_id or not new_status:
+        if not new_status:
              return jsonify({'success': False, 'message': 'Missing data'}), 400
              
+        from database import update_assignment_status
         success = update_assignment_status(assignment_id, new_status, notes)
         
         if success:

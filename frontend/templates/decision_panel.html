@@ -1,168 +1,637 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Triage Decision Panel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
+{% block title %}Decision Queue — ResolveFlow{% endblock %}
+
+{% block page_title %}
+Triage Queue
+<span class="ml-2 text-[11px] font-extrabold bg-accent-dim text-accent px-1.5 py-0.5 rounded">
+    {{ complaints|length }} PENDING
+</span>
+{% endblock %}
+
+{% block head %}
+<style>
+    .nav-item {
+        height: 36px;
+        padding: 0 12px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 13px;
+        transition: background-color 150ms ease, color 150ms ease;
+        color: var(--text-secondary);
+    }
+
+    .nav-item:hover {
+        background-color: var(--bg-elevated);
+        color: var(--text-primary);
+    }
+
+    .nav-item.active {
+        background-color: var(--accent-dim);
+        color: var(--accent);
+        border-left: 2px solid var(--accent);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .nav-item svg {
+        width: 16px;
+        height: 16px;
+        color: var(--text-muted);
+    }
+
+    .nav-item:hover svg {
+        color: var(--text-secondary);
+    }
+
+    .nav-item.active svg {
+        color: var(--accent);
+    }
+
+    /* Decision Queue Columns */
+    .queue-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0;
+        height: calc(100vh - 56px);
+        overflow: hidden;
+    }
+
+    @media (min-width: 1280px) {
+        .queue-container {
+            grid-template-columns: 400px 1fr;
         }
-    </style>
-</head>
+    }
 
-<body class="bg-gray-900 text-gray-100 min-h-screen font-inter flex flex-col">
+    .ticket-list {
+        overflow-y: auto;
+        border-right: 1px solid var(--border-subtle);
+        padding: 16px;
+        background: var(--bg-surface);
+    }
 
-    <!-- Header with Consolidated Navigation -->
-    <header
-        class="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8 shadow-sm z-10 shrink-0">
-        <div class="flex items-center gap-8">
-            <h2 class="text-lg font-semibold text-gray-100 flex items-center gap-2">
-                <span class="text-xl">📋</span> Decision Queue <span class="text-gray-600 text-sm font-normal ml-2">|
-                    Admin Review</span>
-            </h2>
+    .detail-panel {
+        overflow-y: auto;
+        padding: 32px;
+        background: var(--bg-base);
+    }
 
-            <nav class="flex items-center space-x-1">
-                <a href="/assignments"
-                    class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
-                    Operations Console
-                </a>
-                <a href="/admin"
-                    class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
-                    Audit Log
-                </a>
-            </nav>
-        </div>
+    .ticket-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 150ms ease;
+        position: relative;
+    }
 
-        <div class="flex items-center gap-4">
-            <div class="flex items-center">
-                <form action="/decision-queue" method="GET" class="flex items-center">
-                    <div class="bg-gray-800 rounded-md p-1 flex items-center border border-gray-700">
-                        <span class="text-[10px] text-gray-500 px-2 uppercase font-bold tracking-widest">Filter
-                            Priority:</span>
-                        <select name="priority" onchange="this.form.submit()"
-                            class="bg-transparent text-xs text-gray-300 focus:outline-none cursor-pointer pr-2 hover:text-white transition-colors">
-                            <option value="" class="bg-gray-800">All</option>
-                            <option value="high" class="bg-gray-800" {% if active_priority=='high' %}selected{% endif
-                                %}>High</option>
-                            <option value="medium" class="bg-gray-800" {% if active_priority=='medium' %}selected{%
-                                endif %}>Medium</option>
-                            <option value="low" class="bg-gray-800" {% if active_priority=='low' %}selected{% endif %}>
-                                Low</option>
-                        </select>
-                    </div>
-                </form>
+    .ticket-card:hover {
+        border-color: var(--border-default);
+        background: var(--bg-elevated);
+    }
+
+    .ticket-card.active {
+        border-color: var(--accent);
+        background: var(--bg-elevated);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* AI Confidence Borders */
+    .confidence-high {
+        border-left: 3px solid var(--accent) !important;
+    }
+
+    .confidence-mid {
+        border-left: 3px solid var(--warning) !important;
+    }
+
+    .confidence-low {
+        border-left: 3px solid var(--danger) !important;
+    }
+
+    .urgency-badge {
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .urgency-high {
+        background: rgba(248, 81, 73, 0.15);
+        color: #f85149;
+    }
+
+    .urgency-medium {
+        background: rgba(210, 153, 34, 0.15);
+        color: #d29922;
+    }
+
+    .urgency-low {
+        background: rgba(63, 185, 80, 0.15);
+        color: #3fb950;
+    }
+
+    .tag {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .fade-out {
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: all 200ms ease;
+    }
+
+    /* Progress bar */
+    .conf-bar-container {
+        width: 100%;
+        height: 4px;
+        background: var(--bg-surface);
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-subtle);
+    }
+
+    .conf-bar-fill {
+        height: 100%;
+        background: var(--accent);
+    }
+
+    /* Team Pills */
+    .team-pill {
+        cursor: pointer;
+        border: 1px solid var(--border-subtle);
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        transition: all 150ms ease;
+    }
+
+    .team-pill:hover {
+        border-color: var(--accent);
+    }
+
+    .team-pill.selected {
+        background: var(--accent-dim);
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .category-pill {
+        cursor: pointer;
+        border: 1px solid var(--border-subtle);
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        font-size: 11px;
+        transition: all 150ms ease;
+    }
+
+    .category-pill.selected {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+</style>
+{% endblock %}
+
+{% block nav %}
+<a href="/admin" class="nav-item">
+    <svg class="w-4 h-4 text-muted group-hover:text-secondary transition-colors" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    Audit Log
+</a>
+<a href="/decision-queue" class="nav-item active">
+    <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    Decision Queue
+</a>
+<a href="/assignments" class="nav-item">
+    <svg class="w-4 h-4 text-muted group-hover:text-secondary transition-colors" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    </svg>
+    Operations Inbox
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="queue-container">
+    <!-- Left: Ticket List -->
+    <div class="ticket-list custom-scrollbar">
+        <div class="flex items-center justify-between mb-4 px-1">
+            <h3 class="text-xs font-bold text-muted uppercase tracking-widest">{{ complaints|length }} Pending</h3>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] text-muted">Filter:</span>
+                <select id="urgency-filter" onchange="filterQueue(this.value)"
+                    class="bg-transparent text-[11px] text-secondary font-bold focus:outline-none">
+                    <option value="all">All</option>
+                    <option value="high" {% if active_priority=='high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if active_priority=='medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if active_priority=='low' %}selected{% endif %}>Low</option>
+                </select>
             </div>
-            <div class="h-6 w-px bg-gray-800 mx-2"></div>
-            <a href="/logout"
-                class="text-gray-500 hover:text-red-400 text-xs font-bold uppercase tracking-widest transition-colors">Logout</a>
         </div>
-    </header>
 
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        {% for c in complaints %}
+        {% set conf_pct = ((c.review_confidence or 0) * 100) | int %}
+        <div class="ticket-card interactive 
+                    {% if (conf_pct / 100.0) >= 0.85 %}confidence-high
+                    {% elif (conf_pct / 100.0) >= 0.60 %}confidence-mid
+                    {% else %}confidence-low{% endif %}" id="card-{{ c.id }}" data-ticket="{{ c|tojson|forceescape }}"
+            onclick="selectTicket(JSON.parse(this.dataset.ticket))">
+            <div class="flex justify-between items-start mb-1.5">
+                <span class="text-[10px] font-mono text-muted">#{{ c.id }}</span>
+                <span class="text-[10px] text-muted">{{ c.timestamp[11:16] }}</span>
+            </div>
+            <p class="text-[13px] font-medium text-primary line-clamp-2 leading-snug mb-2">{{ c.complaint_text }}</p>
 
-        <div class="space-y-4">
-            {% for c in complaints %}
-            <!-- Card -->
-            <div
-                class="group relative bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700 hover:border-gray-600 transition-all">
-                <!-- Priority Strip -->
-                <div class="absolute left-0 top-0 bottom-0 w-1.5 
-                    {% if c.predicted_urgency == 'high' %}bg-red-500
-                    {% elif c.predicted_urgency == 'medium' %}bg-yellow-500
-                    {% else %}bg-green-500{% endif %}">
+            <div class="flex flex-wrap gap-1 mb-2">
+                {% for pi in c.pending_issues[:2] %}
+                <span class="tag">{{ pi.issue.replace('_', ' ').capitalize() }}</span>
+                {% endfor %}
+                {% if c.pending_issues|length > 2 %}
+                <span class="tag">+{{ c.pending_issues|length - 2 }}</span>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] text-muted font-bold uppercase tracking-tight">AI Confidence</span>
+                <span class="text-[10px] text-secondary font-mono">{{ conf_pct }}%</span>
+            </div>
+            <div class="conf-bar-container">
+                <div class="conf-bar-fill" style="width: {{ conf_pct }}%"></div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not complaints %}
+        <div id="queue-empty" class="py-20 text-center">
+            <div class="text-3xl mb-3 text-success">✓</div>
+            <p class="text-secondary font-bold text-sm">Queue is clear</p>
+            <p class="text-muted text-xs mt-1">Admirable work, all set!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Detail Panel -->
+    <div id="detail-panel" class="detail-panel custom-scrollbar">
+        <div id="detail-empty" class="h-full flex flex-col items-center justify-center text-center opacity-60">
+            <div class="w-20 h-20 bg-elevated rounded-full flex items-center justify-center mb-6">
+                <svg class="w-10 h-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+            </div>
+            <p class="text-secondary text-lg font-bold">Select a ticket to review</p>
+            <p class="text-sm text-secondary/60 mt-1">Verify AI classification and route to teams</p>
+        </div>
+
+        <div id="detail-content" class="hidden">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-primary flex items-baseline gap-3">
+                        Request #<span id="dtl-id"></span>
+                    </h2>
+                    <p class="text-muted text-sm mt-1" id="dtl-student"></p>
                 </div>
+                <div id="dtl-urgency" class="urgency-badge">--</div>
+            </div>
 
-                <div class="p-5 pl-7">
-                    <!-- Header -->
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-baseline space-x-3">
-                            <span class="text-sm font-mono text-gray-500 font-bold">Req #{{ c.id }}</span>
-                            <h3 class="text-base font-bold text-gray-100">{{ c.student_name }}</h3>
-                        </div>
-                        <span class="text-sm text-gray-400 font-medium">Room {{ c.room_number or '--' }}</span>
+            <div class="space-y-8">
+                <!-- Complaint Text -->
+                <section>
+                    <h3 class="text-xs font-bold text-muted uppercase tracking-widest mb-3">Original Complaint</h3>
+                    <div class="bg-surface border border-subtle rounded-lg p-5 text-[15px] leading-relaxed text-primary whitespace-pre-wrap font-mono"
+                        id="dtl-text"></div>
+                </section>
+
+                <!-- AI Classification -->
+                <section>
+                    <h3 class="text-xs font-bold text-muted uppercase tracking-widest mb-3">AI Classification Breakdown
+                    </h3>
+                    <div id="dtl-breakdown" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- JS populated -->
                     </div>
+                </section>
 
-                    <!-- Body -->
-                    <div class="mb-4">
-                        <p class="text-gray-300 text-sm line-clamp-2 leading-relaxed">{{ c.complaint_text }}</p>
-                    </div>
-
-                    <!-- Footer Tags & Actions -->
-                    <div class="flex items-center justify-between mt-4 border-t border-gray-700 pt-4">
-                        <div class="flex flex-wrap items-center gap-3">
-                            <!-- All Pending Issues -->
-                            {% for pi in c.pending_issues %}
-                            <div
-                                class="flex items-center bg-gray-700/50 rounded-md px-2 py-1 border border-gray-600/50">
-                                <span class="text-xs font-bold text-teal-400 mr-2">{{ pi.issue.replace('_', ' ').title()
-                                    }}</span>
-                                <span class="text-[10px] text-gray-400 font-mono">{{ (pi.confidence * 100)|int
-                                    }}%</span>
-                                <button onclick="ignoreIssue({{ c.id }}, '{{ pi.issue }}')"
-                                    class="ml-2 text-gray-500 hover:text-red-400 transition-colors"
-                                    title="Mark this issue as invalid">
-                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                            d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
+                <!-- Routing Actions -->
+                <section class="pt-8 border-t border-subtle">
+                    <h3 class="text-xs font-bold text-muted uppercase tracking-widest mb-4">Final Routing Decision</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <p class="text-sm font-medium text-secondary mb-3">Target Maintenance Teams:</p>
+                            <div id="dtl-teams" class="flex flex-wrap gap-2">
+                                <!-- JS populated pills -->
                             </div>
-                            {% endfor %}
-
-                            <span class="text-[10px] text-gray-600 uppercase tracking-widest font-bold ml-1">
-                                ➔ Suggestion:
-                                <span class="text-gray-400 italic">
-                                    {% set teams = [] %}
-                                    {% for pi in c.pending_issues %}
-                                    {% if pi.suggested_team not in teams %}
-                                    {% set _ = teams.append(pi.suggested_team) %}
-                                    {% endif %}
-                                    {% endfor %}
-                                    {{ teams|join(', ') }}
-                                </span>
-                            </span>
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <a href="/triage?id={{ c.id }}"
-                                class="bg-[#2A9D8F] hover:bg-[#21867a] text-white px-5 py-2 rounded shadow-lg text-sm font-semibold transition-all transform hover:-translate-y-0.5 active:translate-y-0">
-                                Review & Assign Full Ticket
-                            </a>
+                        <!-- Manual Override Toggle Button -->
+                        <div style="margin-top: 20px; margin-bottom: 16px;">
+                            <button id="overrideToggleBtn" onclick="toggleOverridePanel()" style="width: 100%; padding: 10px 16px;
+                                   background: transparent;
+                                   border: 1px solid var(--border-default);
+                                   border-radius: var(--radius-sm);
+                                   color: var(--text-secondary);
+                                   font-size: 13px; font-weight: 500;
+                                   font-family: 'Inter', sans-serif;
+                                   cursor: pointer;
+                                   transition: border-color 150ms ease, color 150ms ease;
+                                   text-align: left;
+                                   display: flex; align-items: center; justify-content: space-between;">
+                                <span>Manual Override — assign teams yourself</span>
+                                <svg id="overrideChevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2"
+                                    style="transition: transform 150ms ease; flex-shrink:0;">
+                                    <path d="M6 9l6 6 6-6" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Override Panel — hidden by default, reveals all teams as checkboxes -->
+                        <div id="overridePanel" style="display: none; margin-bottom: 20px; padding: 16px;
+                                    background: var(--bg-elevated);
+                                    border: 1px solid var(--border-default);
+                                    border-radius: var(--radius-md);">
+
+                            <p style="font-size: 11px; font-weight: 600; text-transform: uppercase;
+                             letter-spacing: 0.07em; color: var(--text-muted); margin: 0 0 12px 0;">
+                                Select teams to assign
+                            </p>
+
+                            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
+                                {% for team in get_all_teams() %}
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;
+                                   padding: 8px 12px; border-radius: var(--radius-sm);
+                                   border: 1px solid var(--border-subtle);
+                                   background: var(--bg-surface);
+                                   transition: border-color 150ms ease;"
+                                    onmouseover="this.style.borderColor='var(--accent)'"
+                                    onmouseout="this.style.borderColor='var(--border-subtle)'">
+                                    <input type="checkbox" name="override_team" value="{{ team }}"
+                                        style="accent-color: var(--accent); width: 15px; height: 15px; flex-shrink:0; cursor:pointer;">
+                                    <span style="font-size: 13px; font-weight: 500; color: var(--text-primary);">
+                                        {{ team }}
+                                    </span>
+                                </label>
+                                {% endfor %}
+                            </div>
+
+                            <button onclick="submitOverride(currentTicket ? currentTicket.id : 0)" style="width: 100%; padding: 10px;
+                                   background: var(--accent); color: white;
+                                   border: none; border-radius: var(--radius-sm);
+                                   font-size: 13px; font-weight: 600;
+                                   font-family: 'Inter', sans-serif;
+                                   cursor: pointer;
+                                   transition: background 150ms ease;"
+                                onmouseover="this.style.background='var(--accent-hover)'"
+                                onmouseout="this.style.background='var(--accent)'">
+                                Confirm Override & Route
+                            </button>
+                        </div>
+
+                        <div class="flex gap-4 pt-4">
+                            <button onclick="approveTicket()" id="approveBtn"
+                                class="flex-1 h-12 bg-accent hover:bg-accent-hover text-white font-bold rounded-md interactive shadow-lg transition-transform active:scale-[0.98]">
+                                Approve & Route
+                            </button>
+                            <button onclick="rejectTicket()"
+                                class="flex-1 h-12 bg-danger/10 hover:bg-danger/20 border border-danger/30 text-danger font-bold rounded-md interactive transition-colors duration-150">
+                                Reject Ticket
+                            </button>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
-
-            <!-- Script was here -->
-            {% else %}
-            <div class="text-center py-20">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-800 mb-4">
-                    <span class="text-2xl">🎉</span>
-                </div>
-                <h3 class="text-xl font-medium text-gray-300">All caught up!</h3>
-                <p class="text-gray-500 mt-1">No pending decisions in the queue.</p>
-            </div>
-            {% endfor %}
         </div>
+    </div>
+</div>
+{% endblock %}
 
-    </main>
-    <script>
-        async function ignoreIssue(id, issue) {
-            if (!confirm('Mark this issue as invalid? It will be removed from the queue.')) return;
-            try {
-                const res = await fetch('/api/triage/ignore', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, issue })
-                });
-                if (res.ok) window.location.reload();
-                else alert('Failed to ignore issue');
-            } catch (e) { console.error(e); }
+{% block scripts %}
+<script>
+    const ALL_TEAMS = {{ get_all_teams() | tojson }};
+    const ALL_CATEGORIES = [
+        'electrical_issue', 'internet_issue', 'plumbing_issue',
+        'furniture_issue', 'cleanliness_issue', 'food_issue',
+        'noise_issue', 'billing_issue', 'other_issue'
+    ];
+
+    let currentTicket = null;
+    let selectedTeams = new Set();
+
+    function filterQueue(val) {
+        window.location.href = `/decision-queue?priority=${val}`;
+    }
+
+    function selectTicket(ticket) {
+        currentTicket = ticket;
+        selectedTeams.clear();
+
+        // UI toggles
+        document.getElementById('detail-empty').classList.add('hidden');
+        document.getElementById('detail-content').classList.remove('hidden');
+
+        // Active card highlight
+        document.querySelectorAll('.ticket-card').forEach(c => c.classList.remove('active'));
+        document.getElementById('card-' + ticket.id).classList.add('active');
+
+        // Populate header
+        document.getElementById('dtl-id').innerText = ticket.id;
+        document.getElementById('dtl-student').innerText = `${ticket.student_name} • Room ${ticket.room_number || '--'}`;
+
+        const uBadge = document.getElementById('dtl-urgency');
+        const urgency = ticket.predicted_urgency || 'Unassigned';
+        uBadge.innerText = urgency;
+        uBadge.className = `urgency-badge urgency-${urgency.toLowerCase()}`;
+
+        // Populate content
+        document.getElementById('dtl-text').innerText = ticket.complaint_text;
+
+        // Populate breakdown
+        const breakdown = document.getElementById('dtl-breakdown');
+        breakdown.innerHTML = '';
+        ticket.pending_issues.forEach(pi => {
+            const div = document.createElement('div');
+            div.className = 'bg-surface border border-subtle rounded-md p-3';
+            const conf = (pi.confidence * 100).toFixed(0);
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[13px] font-medium text-primary">${pi.issue.split('_')[0].capitalize()}</span>
+                    <span class="text-[11px] font-mono text-muted">${conf}%</span>
+                </div>
+                <div class="w-full h-1.5 bg-elevated rounded-full overflow-hidden">
+                    <div class="h-full bg-accent" style="width: ${conf}%"></div>
+                </div>
+            `;
+            breakdown.appendChild(div);
+        });
+
+        // Populate teams
+        const teamList = document.getElementById('dtl-teams');
+        teamList.innerHTML = '';
+
+        // Suggested teams from AI
+        const suggested = new Set(ticket.pending_issues.map(pi => pi.suggested_team));
+
+        ALL_TEAMS.forEach(team => {
+            if (suggested.has(team)) {
+                selectedTeams.add(team);
+                const pill = document.createElement('div');
+                pill.className = `team-pill selected`;
+                pill.innerText = team;
+                pill.style.cursor = 'default';
+                teamList.appendChild(pill);
+            }
+        });
+
+        // Close override panel if open
+        const op = document.getElementById('overridePanel');
+        const chevron = document.getElementById('overrideChevron');
+        const btn = document.getElementById('overrideToggleBtn');
+        if (op) {
+            op.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+            if (btn) {
+                btn.style.borderColor = 'var(--border-default)';
+                btn.style.color = 'var(--text-secondary)';
+            }
         }
-    </script>
-</body>
 
-</html>
+        // Uncheck all override checkboxes
+        document.querySelectorAll('input[name="override_team"]').forEach(cb => cb.checked = false);
+    }
+
+    async function approveTicket() {
+        if (!currentTicket) return;
+
+        const btn = document.getElementById('approveBtn');
+        btn.disabled = true;
+        btn.innerText = 'Routing...';
+
+        try {
+            const res = await fetch('/api/triage/override', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: currentTicket.id,
+                    corrected_teams: Array.from(selectedTeams),
+                    corrected_issues: currentTicket.pending_issues.map(p => p.issue),
+                    corrected_urgency: currentTicket.predicted_urgency
+                })
+            });
+
+            if (res.ok) {
+                const card = document.getElementById('card-' + currentTicket.id);
+                card.classList.add('fade-out');
+                setTimeout(() => {
+                    card.remove();
+                    document.getElementById('detail-content').classList.add('hidden');
+                    document.getElementById('detail-empty').classList.remove('hidden');
+                }, 200);
+            } else {
+                alert("Failed to route ticket.");
+            }
+        } catch (e) {
+            alert("Connection error.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Approve & Route';
+        }
+    }
+
+    async function rejectTicket() {
+        if (!currentTicket) return;
+        const complaintId = currentTicket.id;
+
+        if (!confirm('Reject and dismiss this ticket?')) return;
+        const res = await fetch(`/api/reject/${complaintId}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            const card = document.getElementById('card-' + complaintId);
+            if (card) {
+                card.style.transition = 'opacity 200ms ease';
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 200);
+            }
+            document.getElementById('detail-content').innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;
+               justify-content:center;height:100%;gap:12px;padding-top:100px;">
+            <p style="color:var(--text-muted);font-size:14px;">Ticket rejected</p>
+          </div>`;
+        } else {
+            alert("Failed to reject ticket.");
+        }
+    }
+
+    function toggleOverridePanel() {
+        const panel = document.getElementById('overridePanel');
+        const chevron = document.getElementById('overrideChevron');
+        const btn = document.getElementById('overrideToggleBtn');
+        const isHidden = panel.style.display === 'none';
+
+        panel.style.display = isHidden ? 'block' : 'none';
+        chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        btn.style.borderColor = isHidden ? 'var(--accent)' : 'var(--border-default)';
+        btn.style.color = isHidden ? 'var(--accent)' : 'var(--text-secondary)';
+    }
+
+    async function submitOverride(complaintId) {
+        const checked = [...document.querySelectorAll('input[name="override_team"]:checked')]
+            .map(cb => cb.value);
+        if (checked.length === 0) {
+            alert('Select at least one team before confirming.');
+            return;
+        }
+        try {
+            const res = await fetch(`/api/override/${complaintId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teams: checked })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const card = document.getElementById('card-' + complaintId);
+                if (card) {
+                    card.style.transition = 'opacity 200ms ease, transform 200ms ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(-8px)';
+                    setTimeout(() => card.remove(), 200);
+                }
+                document.getElementById('detail-content').innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center;
+                 justify-content:center; height:100%; gap:12px; padding-top: 100px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+                   stroke="var(--success)" stroke-width="2" stroke-linecap="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              <p style="color:var(--text-secondary); font-size:14px; font-weight:500; margin:0;">
+                Override applied — ticket routed
+              </p>
+            </div>`;
+            } else {
+                alert(data.message || "Failed to route override.");
+            }
+        } catch (err) {
+            console.error('Override failed:', err);
+        }
+    }
+
+    String.prototype.capitalize = function () {
+        return this.charAt(0).toUpperCase() + this.slice(1);
+    }
+</script>
+{% endblock %}

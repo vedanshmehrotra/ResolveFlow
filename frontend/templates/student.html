@@ -1,411 +1,411 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hostel Complaint Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+{% block title %}Student Portal — ResolveFlow{% endblock %}
 
-        .animate-fade-in-up {
-            animation: fadeInUp 0.3s ease-out forwards;
-        }
+{% block head %}
+<style>
+    :root {
+        --sidebar-bg: #1a2e38;
+    }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
+    #sidebar {
+        background-color: var(--sidebar-bg);
+        border-right: none;
+    }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
-</head>
+    #sidebar .text-primary {
+        color: #ffffff;
+    }
 
-<body class="bg-gray-50 h-screen overflow-hidden flex font-inter">
+    #sidebar .text-secondary {
+        color: rgba(255, 255, 255, 0.7);
+    }
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-[#264653] text-white flex-shrink-0 hidden md:flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-[#2A9D8F]">
-            <span class="text-xl font-bold tracking-tight">ResolveFlow</span>
+    #sidebar .text-muted {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    #sidebar .role-badge {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    #sidebar .border-subtle {
+        border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item {
+        height: 40px;
+        padding: 0 12px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 150ms ease;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .nav-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .nav-item.active {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    .nav-item svg {
+        width: 16px;
+        height: 16px;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .nav-item:hover svg {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .nav-item.active svg {
+        color: var(--accent);
+    }
+
+    .form-section {
+        padding: 24px 0;
+    }
+
+    .form-section:not(:last-child) {
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .success-badge {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 4px;
+        letter-spacing: 0.03em;
+    }
+
+    .badge-sent {
+        background: rgba(59, 130, 246, 0.12);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .badge-in-progress {
+        background: rgba(234, 179, 8, 0.12);
+        color: #fbbf24;
+        border: 1px solid rgba(234, 179, 8, 0.25);
+    }
+
+    .badge-resolved {
+        background: rgba(34, 197, 94, 0.12);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+
+    .badge-pending {
+        background: rgba(248, 81, 73, 0.12);
+        color: #f85149;
+        border: 1px solid rgba(248, 81, 73, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block nav %}
+<a href="#" onclick="showSection('submit')" id="submitNavBtn" class="nav-item active">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+    </svg>
+    Submit Request
+</a>
+<a href="#" onclick="showSection('requests')" id="requestsNavBtn" class="nav-item">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+    </svg>
+    My Requests
+</a>
+{% endblock %}
+
+{% block page_title %}Maintenance Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-[640px] mx-auto px-6 py-8">
+    <div id="submitSection" class="bg-surface border border-subtle rounded-lg p-8 shadow-sm">
+        <h2 class="text-xl font-semibold mb-1">Submit Maintenance Request</h2>
+        <p class="text-secondary text-[13px] mb-8">Tell us what needs fixing and we'll route it to the right team.</p>
+
+        <!-- Section 1: Your Details -->
+        <div class="form-section">
+            <h3 class="text-[14px] font-semibold mb-4 text-primary">1. Your Details</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">Full
+                        Name</label>
+                    <input type="text" value="{{ user.username }}" readonly
+                        class="w-full h-9 px-3 bg-elevated border border-subtle rounded-md text-[13px] text-muted cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">Room Number
+                        <span class="text-danger">*</span></label>
+                    <input type="text" id="room_number" placeholder="e.g. 302"
+                        class="w-full h-9 px-3 border border-default rounded-md text-[13px] focus:outline-none focus:border-accent transition-colors">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wider">Student ID
+                    (Optional)</label>
+                <input type="text" id="student_id" placeholder="Optional"
+                    class="w-full h-9 px-3 border border-default rounded-md text-[13px] focus:outline-none focus:border-accent transition-colors">
+            </div>
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-2">
-            <a href="#" onclick="showSection('submit')" id="submitNavBtn"
-                class="flex items-center px-4 py-3 text-sm font-medium bg-[#2A9D8F] text-white rounded-lg shadow-sm">
-                <svg class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Submit New
-            </a>
-            <a href="#" onclick="showSection('requests')" id="requestsNavBtn"
-                class="flex items-center px-4 py-3 text-sm font-medium text-gray-300 hover:bg-[#2A9D8F] hover:text-white rounded-lg transition-colors">
-                <svg class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+        <!-- Section 2: Describe the Issue -->
+        <div class="form-section">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[14px] font-semibold text-primary">2. Describe the Issue</h3>
+                <span id="char-counter" class="text-[11px] text-muted">0/500</span>
+            </div>
+            <div class="relative">
+                <label class="block text-secondary mb-1.5 text-[13px]">What's the problem?</label>
+                <textarea id="complaint" rows="6" maxlength="500"
+                    placeholder="e.g. The bathroom tap is leaking continuously..."
+                    class="w-full p-3 border border-default rounded-md text-[13px] focus:outline-none focus:border-accent transition-colors resize-none mb-1"></textarea>
+                <p class="text-[11px] text-muted italic">The more detail you provide, the faster your request gets
+                    routed.</p>
+            </div>
+        </div>
+
+        <!-- Section 3: Submit -->
+        <div class="form-section !border-none pt-8">
+            <div class="pt-5 mt-2 border-t border-gray-200">
+                <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Classification Model
+                </span>
+                <div class="flex items-center space-x-6">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="radio" name="model" value="ML" checked
+                            class="w-4 h-4 accent-[#2A9D8F] cursor-pointer">
+                        <span class="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
+                            Standard ML
+                        </span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="radio" name="model" value="DL" class="w-4 h-4 accent-[#2A9D8F] cursor-pointer">
+                        <span class="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
+                            Deep Learning
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-6 flex items-center justify-end">
+                <button onclick="submitComplaint()" id="submitBtn" class="px-6 py-2.5 text-sm font-semibold text-white rounded-md shadow-sm
+                       transition-all duration-150
+                       bg-[#2A9D8F] hover:bg-[#22877a] active:translate-y-px
+                       disabled:opacity-50 disabled:cursor-not-allowed">
+                    Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Requests List -->
+    <div id="requestsSection" class="hidden space-y-4">
+        {% for c in complaints %}
+        <div class="bg-surface border border-subtle rounded-lg p-5 interactive">
+            <div class="flex justify-between items-start mb-3">
+                <div class="flex flex-col">
+                    <span class="text-[11px] font-mono text-muted tracking-tight mb-0.5">REQ-#{{ c.id }}</span>
+                    <span class="text-[12px] text-secondary">{{ c.timestamp[:16] }}</span>
+                </div>
+                <span class="status-badge 
+                    {% if c.status == 'RESOLVED' %}badge-resolved
+                    {% elif c.status == 'IN_PROGRESS' %}badge-in-progress
+                    {% elif c.status == 'PENDING' %}badge-pending
+                    {% else %}badge-sent{% endif %}">
+                    {{ c.status.replace('_', ' ') }}
+                </span>
+            </div>
+            <p class="text-[14px] text-primary mb-4 leading-relaxed">{{ c.complaint_text }}</p>
+
+            {% if c.assignments %}
+            <div class="border-t border-subtle pt-4 mt-2 space-y-3">
+                <p class="text-[11px] font-bold text-muted uppercase tracking-wider">Updates</p>
+                {% for a in c.assignments %}
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-1.5 h-1.5 rounded-full {% if a.status == 'RESOLVED' %}bg-success{% elif a.status == 'IN_PROGRESS' %}bg-warning{% else %}bg-accent{% endif %}">
+                    </div>
+                    <div class="flex-1 border-l-2 border-transparent hover:border-accent pl-1 transition-colors">
+                        <p class="text-[12px] font-medium text-primary flex items-center gap-2 mb-1">
+                            {{ a.team }}
+                            <span class="status-badge
+                                {% if a.status == 'RESOLVED' %}badge-resolved
+                                {% elif a.status == 'IN_PROGRESS' %}badge-in-progress
+                                {% elif a.status == 'PENDING' %}badge-pending
+                                {% else %}badge-sent{% endif %}">
+                                {{ a.status.replace('_', ' ') }}
+                            </span>
+                        </p>
+                        <p class="text-[12px] text-muted">{{ a.notes or 'Ticket received and queued.' }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if not complaints %}
+        <div class="py-16 text-center">
+            <div class="w-16 h-16 bg-elevated rounded-full flex items-center justify-center mb-4 mx-auto">
+                <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
-                My Requests
-            </a>
-        </nav>
-        <div class="p-4 border-t border-[#2A9D8F]">
-            <div class="flex items-center gap-3">
-                <div
-                    class="h-8 w-8 rounded-full bg-[#2A9D8F] flex items-center justify-center text-white font-bold text-xs uppercase">
-                    {{ user.username[:2] }}
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium truncate">{{ user.username }}</div>
-                    <a href="{{ url_for('logout') }}" class="text-xs text-gray-400 hover:text-red-400">Logout</a>
-                </div>
             </div>
+            <p class="text-secondary font-bold text-lg">No requests yet.</p>
+            <p class="text-muted text-sm px-8">Submit your first maintenance request to see it tracked here.</p>
         </div>
-    </aside>
+        {% endif %}
+    </div>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        <!-- Headers -->
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-8">
-            <h2 class="text-lg font-semibold text-gray-800" id="headerTitle">Submit a Maintenance Request</h2>
-            <button class="md:hidden text-gray-600 focus:outline-none">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
-                    </path>
+</div>
+
+<!-- Success Modal -->
+<div id="successModal"
+    class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-[2px]">
+    <div class="bg-white rounded-lg max-w-[420px] w-full p-8 shadow-2xl animate-fade-in">
+        <div class="flex flex-col items-center text-center">
+            <div class="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
+            </div>
+            <h3 class="text-lg font-bold text-[#0f172a] mb-1">Request Submitted</h3>
+            <p class="text-sm text-secondary mb-6">Your maintenance request has been successfully queued for triage.</p>
+
+            <div class="w-full bg-slate-50 border border-slate-100 rounded-lg p-4 space-y-3 text-left mb-6">
+                <div class="flex justify-between items-center">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ticket ID</span>
+                    <span id="ticketIdDisplay" class="font-mono text-sm font-bold text-accent">#----</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Estimated SLA</span>
+                    <span id="slaBadge" class="success-badge px-2 py-0.5">P-</span>
+                </div>
+            </div>
+
+            <button onclick="resetSubmission()"
+                class="w-full h-10 bg-[#0f172a] hover:bg-slate-800 text-white font-semibold rounded-md interactive shadow-sm">
+                Done
             </button>
-        </header>
-
-        <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto bg-gray-50 p-6 lg:p-8">
-            <div class="max-w-4xl mx-auto space-y-6">
-
-                <!-- Submit Section -->
-                <div id="submitSection">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:p-8">
-                        <h3 class="text-xl font-bold text-[#264653] mb-2">New Request</h3>
-                        <p class="text-gray-500 text-sm mb-6">Please provide details about the issue for correct
-                            routing.</p>
-
-                        <div class="space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                                    <input type="text" value="{{ user.username }}" readonly
-                                        class="w-full h-10 px-3 py-2 border border-gray-100 bg-gray-50 rounded-md text-sm text-gray-500 cursor-not-allowed">
-                                </div>
-                                <div>
-                                    <label for="room_number" class="block text-sm font-medium text-gray-700 mb-1">Room
-                                        Number <span class="text-red-500">*</span></label>
-                                    <input type="text" id="room_number" placeholder="404"
-                                        class="w-full h-10 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2A9D8F] outline-none text-sm">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label for="complaint" class="block text-sm font-medium text-gray-700 mb-1">Description
-                                    <span class="text-red-500">*</span></label>
-                                <textarea id="complaint" rows="5" placeholder="Describe the problem..."
-                                    class="w-full px-3 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2A9D8F] outline-none text-sm resize-none"></textarea>
-                            </div>
-
-                            <div class="pt-2 border-t border-gray-100">
-                                <span
-                                    class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Triage
-                                    Model</span>
-                                <div class="flex space-x-6">
-                                    <label class="flex items-center space-x-2 cursor-pointer">
-                                        <input type="radio" name="model" value="ML" checked
-                                            class="text-[#2A9D8F] focus:ring-[#2A9D8F]">
-                                        <span class="text-sm text-gray-700">Standard ML</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer">
-                                        <input type="radio" name="model" value="DL"
-                                            class="text-[#2A9D8F] focus:ring-[#2A9D8F]">
-                                        <span class="text-sm text-gray-700">Deep Learning</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="pt-4 flex items-center justify-end space-x-4">
-                                <button onclick="location.reload()"
-                                    class="px-5 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">Cancel</button>
-                                <button onclick="submitComplaint()" id="submitBtn"
-                                    class="px-5 py-2 text-sm font-medium text-white bg-[#2A9D8F] hover:bg-[#21867a] rounded-md shadow-sm transition-all">Submit
-                                    Request</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- My Requests Section -->
-                <div id="requestsSection" class="hidden">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                                        Date</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Complaint Details</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                                        Progress Status</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                                        Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                {% for c in complaints %}
-                                <tr class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap align-top">
-                                        <div class="text-xs font-bold text-gray-700">{{ c.timestamp[:10] }}</div>
-                                        <div class="text-[10px] text-gray-400 mt-0.5">Ref: #{{ c.id }}</div>
-                                    </td>
-                                    <td class="px-6 py-4 align-top">
-                                        <div class="text-sm text-gray-900 font-medium mb-3">{{ c.complaint_text }}</div>
-
-                                        <!-- Assignment Progress -->
-                                        {% if c.assignments %}
-                                        <div class="space-y-2.5 mt-4">
-                                            <div
-                                                class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1">
-                                                Assigned Support Teams</div>
-                                            {% for a in c.assignments %}
-                                            <div class="flex flex-col bg-gray-50/50 rounded p-2 border border-gray-100">
-                                                <div class="flex items-center justify-between mb-1.5">
-                                                    <span class="text-xs font-bold text-[#264653]">{{ a.team }}</span>
-                                                    <span class="px-1.5 py-0.5 text-[10px] font-bold rounded uppercase
-                                                        {% if a.status == 'RESOLVED' %}bg-green-100 text-green-700
-                                                        {% elif a.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-700
-                                                        {% else %}bg-gray-200 text-gray-600{% endif %}">
-                                                        {{ a.status }}
-                                                    </span>
-                                                </div>
-                                                <div class="flex items-start gap-2">
-                                                    <span class="text-[10px] text-gray-400 mt-0.5">📝</span>
-                                                    <p class="text-xs text-gray-600 italic">
-                                                        {{ a.notes or "Waiting for team to start work..." }}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                        {% else %}
-                                        <div
-                                            class="flex items-center gap-2 p-2 bg-yellow-50 rounded border border-yellow-100">
-                                            <span class="text-xs">⏳</span>
-                                            <span class="text-xs text-yellow-800 font-medium">Triage in progress -
-                                                checking specialist availability</span>
-                                        </div>
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap align-top">
-                                        <div class="flex flex-col gap-2">
-                                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-bold rounded-full 
-                                                {% if c.status == 'RESOLVED' %}bg-green-100 text-green-800
-                                                {% elif c.status == 'SENT' %}bg-blue-100 text-blue-800
-                                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                                                <span class="w-1.5 h-1.5 rounded-full mr-1.5
-                                                    {% if c.status == 'RESOLVED' %}bg-green-500
-                                                    {% elif c.status == 'SENT' %}bg-blue-500
-                                                    {% else %}bg-yellow-500{% endif %}"></span>
-                                                {{ c.status }}
-                                            </span>
-                                            <span class="text-[10px] text-gray-400 font-medium pl-1">Overall
-                                                Response</span>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap align-top text-center">
-                                        {% if c.status == 'RESOLVED' and not c.rating %}
-                                        <button onclick="openRatingModal({{ c.id }})"
-                                            class="text-[#2A9D8F] hover:text-white text-[10px] font-bold px-3 py-1.5 border border-[#2A9D8F] rounded-md hover:bg-[#2A9D8F] transition-all shadow-sm">
-                                            Rate Fix
-                                        </button>
-                                        {% elif c.rating %}
-                                        <div
-                                            class="inline-flex items-center bg-yellow-50 px-2 py-1 rounded border border-yellow-100">
-                                            <span class="text-yellow-500 text-sm mr-1">★</span>
-                                            <span class="text-xs font-bold text-gray-700">{{ c.rating }}</span>
-                                        </div>
-                                        {% else %}
-                                        <div class="h-8 flex items-center justify-center">
-                                            <div class="w-1 h-1 bg-gray-300 rounded-full mx-0.5"></div>
-                                            <div class="w-1 h-1 bg-gray-300 rounded-full mx-0.5"></div>
-                                            <div class="w-1 h-1 bg-gray-300 rounded-full mx-0.5"></div>
-                                        </div>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                {% if not complaints %}
-                                <tr>
-                                    <td colspan="4" class="px-6 py-12 text-center text-gray-500 text-sm italic">
-                                        You haven't submitted any requests yet.
-                                    </td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Helper Text -->
-                <div
-                    class="flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
-                    <svg class="h-5 w-5 flex-shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <div>
-                        <strong class="block font-semibold mb-1">Safety First</strong>
-                        If this is an emergency (e.g., active fire, gas leak, flooding), please call the hostel warden
-                        immediately.
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </main>
-
-    <!-- Rating Modal -->
-    <div id="ratingModal"
-        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl max-w-sm w-full p-6 animate-fade-in-up">
-            <h3 class="text-lg font-bold text-gray-900 mb-2">Rate Resolution</h3>
-            <p class="text-sm text-gray-500 mb-4">How would you rate the fix?</p>
-            <input type="hidden" id="rateComplaintId">
-            <div id="starContainer" class="flex justify-center space-x-2 mb-6">
-                {% for i in range(1, 6) %}
-                <button onclick="setRating({{ i }})" id="star-{{ i }}"
-                    class="text-3xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
-                {% endfor %}
-            </div>
-            <textarea id="feedbackText" rows="3" placeholder="Feedback..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-4 focus:ring-2 focus:ring-[#2A9D8F] outline-none"></textarea>
-            <div class="flex space-x-3">
-                <button onclick="closeRatingModal()"
-                    class="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md">Cancel</button>
-                <button onclick="submitRating()"
-                    class="flex-1 py-2 text-sm font-medium text-white bg-[#2A9D8F] rounded-md hover:bg-[#21867a]">Submit</button>
-            </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- Result Success Modal -->
-    <div id="resultModal"
-        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-fade-in-up">
-            <div class="text-center">
-                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-1">Request Submitted</h3>
-                <p class="text-sm text-gray-500 mb-6">Your ticket has been routed successfully.</p>
-                <div class="bg-gray-50 rounded-md p-4 text-left space-y-3 mb-6 border border-gray-200">
-                    <div class="flex justify-between items-center pb-2 border-b border-gray-200"><span
-                            class="text-xs font-semibold text-gray-500">Ticket ID</span><span
-                            class="font-mono text-sm font-bold text-[#264653]" id="ticketId">#--</span></div>
-                    <div class="flex justify-between items-center"><span
-                            class="text-sm font-medium text-gray-600">Assigned Team</span><span
-                            class="text-sm font-bold text-[#2A9D8F]" id="assignedTeam">--</span></div>
-                </div>
-                <button onclick="location.reload()"
-                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#264653] hover:bg-[#1f3a45]">Done</button>
-            </div>
-        </div>
-    </div>
+{% block scripts %}
+<script>
+    const complaintTextarea = document.getElementById('complaint');
+    const charCounter = document.getElementById('char-counter');
+    const submitBtn = document.getElementById('submitBtn');
 
-    <script>
-        let currentRating = 0;
+    complaintTextarea.addEventListener('input', () => {
+        const len = complaintTextarea.value.length;
+        charCounter.textContent = `${len}/500`;
+        charCounter.className = len >= 500 ? 'text-[11px] text-danger font-bold' : 'text-[11px] text-muted';
+    });
 
-        function setRating(n) {
-            currentRating = n;
-            for (let i = 1; i <= 5; i++) {
-                const s = document.getElementById('star-' + i);
-                s.classList.remove('text-yellow-400', 'text-gray-300');
-                s.classList.add(i <= n ? 'text-yellow-400' : 'text-gray-300');
-            }
+    function showSection(name) {
+        document.getElementById('submitSection').classList.toggle('hidden', name !== 'submit');
+        document.getElementById('requestsSection').classList.toggle('hidden', name !== 'requests');
+
+        document.getElementById('submitNavBtn').classList.toggle('active', name === 'submit');
+        document.getElementById('requestsNavBtn').classList.toggle('active', name === 'requests');
+
+        // Update Header Title (Fix 18)
+        const headerTitle = document.querySelector('header h1');
+        if (headerTitle) {
+            headerTitle.innerText = name === 'submit' ? 'Maintenance Portal' : 'Request History';
         }
 
-        function openRatingModal(id) {
-            document.getElementById('rateComplaintId').value = id;
-            document.getElementById('ratingModal').classList.remove('hidden');
-        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-        function closeRatingModal() {
-            document.getElementById('ratingModal').classList.add('hidden');
-        }
+    async function submitComplaint() {
+        const text = complaintTextarea.value.trim();
+        const room = document.getElementById('room_number').value.trim();
+        const studentId = document.getElementById('student_id').value.trim();
+        const model = document.querySelector('input[name="model"]:checked').value;
 
-        async function submitRating() {
-            const id = document.getElementById('rateComplaintId').value;
-            const feedback = document.getElementById('feedbackText').value;
-            if (!currentRating) return alert("Please select a rating");
+        let hasError = false;
+        if (!room) { showInputError(document.getElementById('room_number'), "Room number is required"); hasError = true; }
+        if (text.length < 10) { showInputError(complaintTextarea, "Please provide more detail (min 10 chars)"); hasError = true; }
 
-            const res = await fetch('/api/complaints/rate', {
+        if (hasError) return;
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Submitting...
+        `;
+
+        try {
+            const res = await fetch('/api/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ complaint_id: id, rating: currentRating, feedback: feedback })
+                body: JSON.stringify({
+                    room_number: room,
+                    text: text,
+                    student_id: studentId,
+                    model_type: 'ML'
+                })
             });
-            if (res.ok) location.reload();
-        }
+            const result = await res.json();
 
-        async function submitComplaint() {
-            const text = document.getElementById('complaint').value;
-            const model = document.querySelector('input[name="model"]:checked').value;
-            const room = document.getElementById('room_number').value;
+            if (res.ok) {
+                document.getElementById('ticketIdDisplay').innerText = `#${result.data.id}`;
+                const sla = result.data.urgency === 'high' ? 'P1' : (result.data.urgency === 'medium' ? 'P2' : 'P3');
+                const slaEl = document.getElementById('slaBadge');
+                slaEl.innerText = sla;
+                slaEl.className = `success-badge ${sla === 'P1' ? 'bg-danger/20 text-danger' : (sla === 'P2' ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success')}`;
 
-            if (!text.trim() || !room.trim()) return alert("Fields marked * are required.");
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerHTML = "Submitting...";
-
-            try {
-                const response = await fetch('/api/submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room_number: room, text: text, model_type: model })
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    document.getElementById('ticketId').innerText = "#" + result.data.id;
-                    const assignments = result.data.assignments || [];
-                    document.getElementById('assignedTeam').innerText = assignments.length ? assignments[0].team : "Pending Review";
-                    document.getElementById('resultModal').classList.remove('hidden');
-                } else alert(result.message);
-            } catch (err) { alert("Connection failed"); }
-            finally { btn.disabled = false; btn.innerText = "Submit Request"; }
-        }
-
-        function showSection(name) {
-            document.getElementById('submitSection').classList.toggle('hidden', name !== 'submit');
-            document.getElementById('requestsSection').classList.toggle('hidden', name !== 'requests');
-            document.getElementById('headerTitle').innerText = name === 'submit' ? "Submit a Maintenance Request" : "My Maintenance Requests";
-
-            const sBtn = document.getElementById('submitNavBtn');
-            const rBtn = document.getElementById('requestsNavBtn');
-
-            if (name === 'submit') {
-                sBtn.className = "flex items-center px-4 py-3 text-sm font-medium bg-[#2A9D8F] text-white rounded-lg shadow-sm";
-                rBtn.className = "flex items-center px-4 py-3 text-sm font-medium text-gray-300 hover:bg-[#2A9D8F] hover:text-white rounded-lg transition-colors";
+                document.getElementById('successModal').classList.remove('hidden');
             } else {
-                rBtn.className = "flex items-center px-4 py-3 text-sm font-medium bg-[#2A9D8F] text-white rounded-lg shadow-sm";
-                sBtn.className = "flex items-center px-4 py-3 text-sm font-medium text-gray-300 hover:bg-[#2A9D8F] hover:text-white rounded-lg transition-colors";
+                alert(result.message || "Failed to submit request.");
             }
+        } catch (err) {
+            alert("Connection failed. Please check your network.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = "Submit Request";
         }
-    </script>
-</body>
+    }
 
-</html>
+    function resetSubmission() {
+        document.getElementById('successModal').classList.add('hidden');
+        complaintTextarea.value = '';
+        document.getElementById('room_number').value = '';
+        document.getElementById('student_id').value = '';
+        charCounter.textContent = '0/500';
+        showSection('requests');
+        location.reload(); // Quick way to update the list
+    }
+</script>
+{% endblock %}

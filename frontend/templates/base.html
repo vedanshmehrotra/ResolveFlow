@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" class="{% if is_student %}student-theme{% endif %}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ResolveFlow{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    {% block head %}{% endblock %}
+</head>
+
+<body class="bg-base text-primary h-screen flex flex-col md:flex-row overflow-hidden">
+    <!-- Backdrop for mobile -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+        class="fixed md:relative w-[240px] h-full bg-surface border-r border-subtle z-30 transition-transform duration-300 -translate-x-full md:translate-x-0 flex flex-col shrink-0">
+        <!-- Logo Area -->
+        <div class="h-[56px] flex items-center px-4 justify-between border-b border-subtle">
+            <span class="text-[16px] font-semibold text-primary">ResolveFlow</span>
+            <span class="role-badge">{{ user.role.capitalize() if user else 'User' }}</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto custom-scrollbar">
+            {% block nav %}{% endblock %}
+        </nav>
+
+        <!-- User Footer -->
+        <div class="p-3 border-t border-subtle">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-7 h-7 rounded-full bg-elevated flex items-center justify-center text-primary text-[11px] font-semibold border border-subtle">
+                    {% set initials = (user.username or 'GU')[:2] | upper if user else 'GU' %}
+                    {{ initials }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[13px] font-medium text-primary truncate">{{ user.username if user and user.username
+                        else 'Guest' }}</p>
+                    <p class="text-[12px] text-muted truncate">{{ user.role.capitalize() if user else 'Guest' }}</p>
+                </div>
+                <a href="{{ url_for('logout') }}" class="text-muted hover:text-danger transition-colors p-1"
+                    title="Logout">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Header -->
+        <header class="h-[56px] bg-base border-b border-subtle flex items-center px-4 shrink-0">
+            <button id="mobile-hamburger"
+                class="md:hidden p-2 -ml-2 text-secondary hover:text-primary transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <h1 class="text-[15px] font-semibold text-primary">{% block page_title %}{% endblock %}</h1>
+            <div class="ml-auto flex items-center gap-2">
+                <button onclick="window.location.reload()"
+                    class="p-2 text-muted hover:text-primary transition-colors rounded-md hover:bg-elevated"
+                    title="Refresh">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+                {% block header_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar bg-base relative">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

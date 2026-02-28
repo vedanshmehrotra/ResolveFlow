@@ -198,13 +198,9 @@
             <div class="tab" onclick="setMode('signup')">Sign Up</div>
         </div>
 
-        {% if error %}
-        <div class="alert alert-error">
-            {{ error }}
-        </div>
-        {% endif %}
+        
 
-        <form id="auth-form" action="{{ url_for('login') }}" method="POST">
+        <form id="auth-form" action="/login" method="POST">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required placeholder="e.g. jdoe123">
@@ -236,14 +232,14 @@
             const tabs = document.querySelectorAll('.tab');
 
             if (mode === 'signup') {
-                form.action = "{{ url_for('signup') }}";
+                form.action = "/signup";
                 subHeader.innerText = "Create a new account";
                 submitBtn.innerText = "Create Account";
                 roleGroup.style.display = 'block';
                 tabs[1].classList.add('active');
                 tabs[0].classList.remove('active');
             } else {
-                form.action = "{{ url_for('login') }}";
+                form.action = "/login";
                 subHeader.innerText = "Sign in to your account";
                 submitBtn.innerText = "Login";
                 roleGroup.style.display = 'none';

@@ -1,204 +1,321 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Operations Inbox</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
-</head>
+{% block title %}Operations Inbox — ResolveFlow{% endblock %}
 
-<body class="bg-gray-100 min-h-screen">
+{% block head %}
+<style>
+    .nav-item {
+        height: 36px;
+        padding: 0 12px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 13px;
+        transition: background-color 150ms ease, color 150ms ease;
+        color: var(--text-secondary);
+    }
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-900">
+    .nav-item:hover {
+        background-color: var(--bg-elevated);
+        color: var(--text-primary);
+    }
 
-        <!-- Header with Consolidated Navigation -->
-        <header
-            class="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8 shadow-sm z-10 shrink-0">
-            <div class="flex items-center gap-8">
-                <h2 class="text-lg font-semibold text-gray-100 flex items-center gap-2">
-                    <span class="text-xl">🔨</span> Operations Console <span
-                        class="text-gray-600 text-sm font-normal ml-2">| Active Assignments</span>
-                </h2>
+    .nav-item.active {
+        background-color: var(--accent-dim);
+        color: var(--accent);
+        border-left: 2px solid var(--accent);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
 
-                <nav class="flex items-center space-x-1">
-                    <a href="/decision-queue"
-                        class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
-                        Decision Queue
-                    </a>
-                    <a href="/admin"
-                        class="text-gray-400 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800">
-                        Audit Log
-                    </a>
-                </nav>
+    .team-header {
+        padding: 20px 0 8px 0;
+        margin-top: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .team-header-name {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #8b949e;
+    }
+
+    .assignment-card {
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-subtle);
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        transition: opacity 150ms ease;
+    }
+
+    .assignment-card:hover {
+        background: var(--bg-elevated);
+    }
+
+    .assignment-card.resolved {
+        opacity: 0.45;
+    }
+
+    .priority-indicator {
+        width: 3px;
+        height: 32px;
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+
+    .status-select {
+        appearance: none;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-primary);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 6px 32px 6px 12px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        cursor: pointer;
+        outline: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b949e'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 12px;
+        transition: all 150ms ease;
+    }
+
+    .status-select:hover {
+        border-color: var(--border-default);
+    }
+
+    .status-select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+
+    .filter-tab {
+        padding: 6px 16px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 20px;
+        color: var(--text-secondary);
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        transition: all 150ms ease;
+    }
+
+    .filter-tab:hover {
+        color: var(--text-primary);
+        border-color: var(--border-default);
+    }
+
+    .filter-tab.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+</style>
+{% endblock %}
+
+{% block nav %}
+<a href="/admin" class="nav-item">
+    <svg class="w-4 h-4 text-muted group-hover:text-secondary transition-colors" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    Audit Log
+</a>
+<a href="/decision-queue" class="nav-item">
+    <svg class="w-4 h-4 text-muted group-hover:text-secondary transition-colors" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    Decision Queue
+</a>
+<a href="/assignments" class="nav-item active">
+    <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    </svg>
+    Operations Inbox
+</a>
+{% endblock %}
+
+{% block page_title %}Operations Console{% endblock %}
+
+{% block header_actions %}
+<div class="flex gap-2">
+    <button onclick="filterTasks('ALL')" class="filter-tab active" data-filter="ALL">All Tasks</button>
+    <button onclick="filterTasks('OPEN')" class="filter-tab" data-filter="OPEN">Open</button>
+    <button onclick="filterTasks('IN_PROGRESS')" class="filter-tab" data-filter="IN_PROGRESS">Progress</button>
+    <button onclick="filterTasks('RESOLVED')" class="filter-tab" data-filter="RESOLVED">Resolved</button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="assignments-list">
+    {% set ns = namespace(current_team=None) %}
+    {% for a in assignments|sort(attribute='team') %}
+    {% if a.team != ns.current_team %}
+    {% set ns.current_team = a.team %}
+    {% set team_count = assignments|selectattr('team', 'equalto', a.team)|list|length %}
+    <div class="team-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:3px; height:14px; background:var(--accent); border-radius:2px;"></div>
+            <span class="team-header-name">{{ a.team }} ({{ team_count }})</span>
+        </div>
+        <span class="text-[10px] bg-elevated px-2 py-0.5 rounded border border-subtle text-muted">ACTIVE TEAM</span>
+    </div>
+    {% endif %}
+
+    <div class="assignment-card assignment-row {% if a.status == 'RESOLVED' %}resolved{% endif %}" data-id="{{ a.id }}"
+        data-status="{{ a.status }}">
+
+        <div class="priority-indicator 
+                {% if 'P1' in (a.sla_class or '') %}bg-danger
+                {% elif 'P2' in (a.sla_class or '') %}bg-warning
+                {% else %}bg-success{% endif %}"></div>
+
+        <div class="w-24 shrink-0">
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">
+                REQ-{{ a.complaint_id }}
             </div>
-
-            <div class="flex items-center gap-4">
-                <div class="flex items-center">
-                    <form action="/assignments" method="GET" class="flex items-center">
-                        <label
-                            class="mr-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest hidden sm:block">Filter
-                            Team:</label>
-                        <select name="team" onchange="this.form.submit()"
-                            class="text-xs border border-gray-700 rounded-md shadow-sm focus:border-blue-500 focus:ring-0 py-1.5 pl-3 pr-8 bg-gray-800 text-gray-200 cursor-pointer hover:bg-gray-750 transition-colors">
-                            <option value="">All Teams</option>
-                            {% for team_name in all_teams %}
-                            <option value="{{ team_name }}" {% if active_team==team_name %}selected{% endif %}>
-                                {{ team_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                </div>
-                <div class="h-6 w-px bg-gray-800 mx-2"></div>
-                <a href="/logout"
-                    class="text-gray-500 hover:text-red-400 text-xs font-bold uppercase tracking-widest transition-colors">Logout</a>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Room {{ a.room_number or '—' }}
             </div>
-        </header>
-
-        <!-- Table Container -->
-        <div class="flex-1 overflow-auto p-8 bg-gray-900">
-            <div class="bg-gray-800 shadow-xl rounded-lg overflow-hidden border border-gray-700">
-                <table class="min-w-full divide-y divide-gray-700">
-                    <thead class="bg-gray-800">
-                        <tr>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Request / Room</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Assigned Team</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">SLA
-                                Level</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Status</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Activity Log</th>
-                            <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-700 bg-gray-800">
-                        {% for a in assignments %}
-                        <tr class="hover:bg-gray-700/50 transition-colors group">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-mono font-bold text-blue-400">#{{ a.id }}</div>
-                                <div class="text-xs text-gray-500 mt-1">Rm: <span class="text-gray-300">{{ a.room_number
-                                        or '--' }}</span></div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm font-medium text-gray-200">{{ a.team }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-xs font-bold tracking-wide
-                                    {% if 'P1' in (a.sla_class or '') %}text-red-400
-                                    {% elif 'P2' in (a.sla_class or '') %}text-yellow-400
-                                    {% else %}text-green-400{% endif %}">
-                                    {{ a.sla_class or 'P3' }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2.5 py-0.5 inline-flex text-[10px] uppercase font-bold rounded border 
-                                    {% if a.status == 'SENT' %}bg-blue-900/30 text-blue-300 border-blue-800
-                                    {% elif a.status == 'IN_PROGRESS' %}bg-yellow-900/30 text-yellow-300 border-yellow-800
-                                    {% elif a.status == 'RESOLVED' %}bg-green-900/30 text-green-300 border-green-800{% endif %}">
-                                    {{ a.status.replace('_', ' ') }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm text-gray-400 line-clamp-1 italic max-w-[200px]">{{ a.notes or 'No
-                                    logs' }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="openUpdateModal({{ a.id }}, '{{ a.status }}', '{{ a.notes or '' }}')"
-                                    class="text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 bg-transparent hover:bg-gray-700 px-3 py-1 rounded text-xs transition-all">
-                                    Manage
-                                </button>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="px-6 py-16 text-center text-gray-500">
-                                <div class="flex flex-col items-center justify-center">
-                                    <span class="text-4xl mb-3 opacity-50">💤</span>
-                                    <span class="text-lg font-medium text-gray-400">System Idle</span>
-                                    <span class="text-sm text-gray-600 mt-1">No active work orders matched your
-                                        filter.</span>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div
+                style="font-size: 10px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; color: {% if 'P1' in (a.sla_class or '') %}var(--danger){% elif 'P2' in (a.sla_class or '') %}var(--warning){% else %}var(--success){% endif %};">
+                {{ a.sla_class or 'P3' }} Priority
             </div>
         </div>
-    </main>
 
-    <!-- Update Modal -->
-    <div id="updateModal"
-        class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm transition-opacity">
-        <div
-            class="bg-gray-800 border border-gray-700 rounded-lg p-6 w-96 shadow-2xl transform transition-all scale-100">
-            <h3 class="text-lg font-bold mb-4 text-gray-100">Update Work Order</h3>
-            <input type="hidden" id="modalId">
-            <div class="mb-4">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status Phase</label>
-                <select id="modalStatus"
-                    class="w-full bg-gray-900 border border-gray-600 text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    <option value="SENT">Sent (Queued)</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="RESOLVED">Resolved</option>
-                </select>
+        <div class="flex-1">
+            <p class="text-[14px] font-medium text-primary mb-1">{{ team_issue_map.get(a.team, a.team) }}</p>
+            <div class="assignment-notes mt-2">
+                <button onclick="toggleNote(this)" class="text-xs text-[#2A9D8F] hover:underline focus:outline-none">
+                    + Add Note
+                </button>
+                <div class="note-field hidden mt-2">
+                    <textarea data-assignment-id="{{ a.id }}" placeholder="Add a note for this ticket..." rows="2"
+                        class="w-full text-xs px-3 py-2 rounded border border-[rgba(255,255,255,0.12)]
+                         bg-[#1c2128] text-[#e6edf3] placeholder-[#484f58]
+                         focus:outline-none focus:border-[#2A9D8F] resize-none"
+                        onblur="saveNote(this)">{{ a.notes or '' }}</textarea>
+                </div>
             </div>
-            <div class="mb-6">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Field Logs</label>
-                <textarea id="modalNotes" rows="3"
-                    class="w-full bg-gray-900 border border-gray-600 text-gray-200 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 text-sm"
-                    placeholder="Enter resolution details..."></textarea>
-            </div>
-            <div class="flex justify-end space-x-3">
-                <button onclick="closeModal()"
-                    class="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md text-sm font-medium transition-colors">Cancel</button>
-                <button onclick="saveUpdate()"
-                    class="px-4 py-2 bg-[#2A9D8F] text-white rounded-md hover:bg-[#21867a] text-sm font-medium shadow-sm transition-colors">Confirm
-                    Update</button>
-            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <select class="status-select" data-assignment-id="{{ a.id }}" onchange="updateStatus(this)">
+                <option value="SENT" {% if a.status=='SENT' %}selected{% endif %}>Sent</option>
+                <option value="IN_PROGRESS" {% if a.status=='IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                <option value="RESOLVED" {% if a.status=='RESOLVED' %}selected{% endif %}>Resolved</option>
+            </select>
         </div>
     </div>
+    {% endfor %}
 
-    <script>
-        function openUpdateModal(id, status, notes) {
-            document.getElementById('modalId').value = id;
-            document.getElementById('modalStatus').value = status;
-            document.getElementById('modalNotes').value = notes;
-            document.getElementById('updateModal').classList.remove('hidden');
+    {% if not assignments %}
+    <div class="py-32 flex flex-col items-center justify-center text-center">
+        <div class="text-4xl mb-4">✅</div>
+        <p class="text-secondary font-bold">No tasks assigned</p>
+        <p class="text-muted text-sm mt-1">Excellent! All teams have clear boards.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterTasks(filter) {
+        // Update tabs
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.filter === filter);
+        });
+
+        // Update rows
+        const rows = document.querySelectorAll('.assignment-row');
+        rows.forEach(row => {
+            const status = row.dataset.status;
+            if (filter === 'ALL') {
+                row.style.display = 'flex';
+            } else if (filter === 'OPEN') {
+                row.style.display = (status === 'SENT' || status === 'IN_PROGRESS') ? 'flex' : 'none';
+            } else {
+                row.style.display = (status === filter) ? 'flex' : 'none';
+            }
+        });
+
+        // Hide empty team headers
+        document.querySelectorAll('.team-header').forEach(header => {
+            let next = header.nextElementSibling;
+            let hasVisible = false;
+            while (next && next.classList.contains('assignment-row')) {
+                if (next.style.display !== 'none') {
+                    hasVisible = true;
+                    break;
+                }
+                next = next.nextElementSibling;
+            }
+            header.style.display = hasVisible ? 'flex' : 'none';
+        });
+    }
+
+    async function updateStatus(selectEl) {
+        const assignmentId = selectEl.dataset.assignmentId;
+        const newStatus = selectEl.value;
+        try {
+            const res = await fetch(`/api/assignment/${assignmentId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const row = selectEl.closest('.assignment-row');
+                row.dataset.status = newStatus;
+
+                // Update visual state: if RESOLVED, fade the row
+                if (newStatus === 'RESOLVED') {
+                    row.style.transition = 'opacity 300ms ease';
+                    row.style.opacity = '0.4';
+                } else {
+                    row.style.opacity = '1';
+                }
+
+                // Refresh filters immediately
+                const activeFilter = document.querySelector('.filter-tab.active').dataset.filter;
+                filterTasks(activeFilter);
+            }
+        } catch (err) {
+            console.error('Status update failed:', err);
         }
+    }
 
-        function closeModal() {
-            document.getElementById('updateModal').classList.add('hidden');
+    function toggleNote(btn) {
+        const field = btn.nextElementSibling;
+        field.classList.toggle('hidden');
+        btn.textContent = field.classList.contains('hidden') ? '+ Add Note' : '− Hide Note';
+        if (!field.classList.contains('hidden')) {
+            field.querySelector('textarea').focus();
         }
+    }
 
-        async function saveUpdate() {
-            const id = document.getElementById('modalId').value;
-            const status = document.getElementById('modalStatus').value;
-            const notes = document.getElementById('modalNotes').value;
-
-            try {
-                const res = await fetch('/api/assignments/update', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ assignment_id: id, status: status, notes: notes })
-                });
-                if (res.ok) window.location.reload();
-                else alert('Update failed');
-            } catch (e) { console.error(e); }
-        }
-    </script>
-</body>
-
-</html>
+    async function saveNote(textarea) {
+        const assignmentId = textarea.dataset.assignmentId;
+        const notes = textarea.value;
+        await fetch(`/api/assignment/${assignmentId}/note`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes })
+        });
+    }
+</script>
+{% endblock %}

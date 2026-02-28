@@ -149,7 +149,7 @@ def get_assignments(team_filter: Optional[str] = None) -> List[Dict[str, Any]]:
         query += " WHERE a.team = ?"
         args.append(team_filter)
     
-    query += " ORDER BY a.timestamp DESC"
+    query += " ORDER BY a.sla_class ASC, a.timestamp DESC"
     
     results = []
     with get_db_connection() as conn:
@@ -173,7 +173,7 @@ def get_decision_queue() -> List[Dict[str, Any]]:
     from model import get_team_name
     
     # 1. Get detailed complaints
-    query = "SELECT * FROM complaints WHERE status != 'RESOLVED' ORDER BY timestamp DESC"
+    query = "SELECT * FROM complaints WHERE status != 'RESOLVED' AND IFNULL(review_status, 'PENDING') = 'PENDING' ORDER BY timestamp DESC"
     
     candidates = []
     with get_db_connection() as conn:
@@ -477,13 +477,17 @@ def get_dashboard_stats() -> Dict[str, int]:
             WHERE confidence >= 0.85
         """).fetchone()[0]
         
-        # Pending review = decision queue count (issues between 0.65 and 0.85 not yet resolved)
+        # Pending review = decision queue count (issues between 0.30 and 0.85 not yet resolved or fallback)
         pending = len(get_decision_queue())
+        
+        # Resolved = count of complaints where status is RESOLVED
+        resolved = cursor.execute("SELECT COUNT(*) FROM complaints WHERE status = 'RESOLVED'").fetchone()[0]
         
         return {
             'total': total,
             'auto_routed': auto_routed,
-            'pending_review': pending
+            'pending_review': pending,
+            'resolved': resolved
         }
 
 # Initialize DB on import if it doesn't exist
