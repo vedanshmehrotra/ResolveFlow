@@ -34,9 +34,17 @@ def load_user(user_id):
 def inject_user():
     return dict(user=current_user)
 
-# Initialize DB on start
+# Initialize DB and Pre-load ML Models on start
 init_db()
 init_assignments_table()
+
+# Pre-load lightweight ML artifacts to prevent 502 timeout on first request
+try:
+    from model import load_ml_artifacts
+    load_ml_artifacts()
+    print("Startup: ML artifacts pre-loaded.")
+except Exception as e:
+    print(f"Startup Warning: Could not pre-load ML artifacts: {e}")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

@@ -24,8 +24,9 @@ MODELS_DIR = os.path.join(BASE_DIR, 'models')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 MAX_SEQUENCE_LENGTH = 100
 
-# Global models cache
-_models_cache = None
+# Global artifacts cache
+_ml_artifacts = None
+_dl_artifacts = None
 
 def download_nltk_data():
     """Ensure required NLTK data is available"""
@@ -40,16 +41,20 @@ def download_nltk_data():
         nltk.download('wordnet', quiet=True)
         nltk.download('punkt_tab', quiet=True)
 
-def load_models() -> Dict[str, Any]:
-    """Load and cache all models"""
-    global _models_cache
-    if _models_cache is not None:
-        return _models_cache
+def load_ml_artifacts() -> Dict[str, Any]:
+    """Load and cache lightweight ML artifacts (TF-IDF, LR/NB, Mappings)"""
+    global _ml_artifacts
+    if _ml_artifacts is not None:
+        return _ml_artifacts
 
     download_nltk_data()
     
-    print("Loading models...")
+    print("Loading ML artifacts...")
     try:
+        # Load mappings first
+        with open(os.path.join(DATA_DIR, 'category_mapping.json'), 'r') as f:
+            mappings = json.load(f)
+
         # Load ML specific artifacts
         with open(os.path.join(MODELS_DIR, 'tfidf_vectorizer.pkl'), 'rb') as f:
             tfidf_vectorizer = pickle.load(f)
@@ -60,6 +65,27 @@ def load_models() -> Dict[str, Any]:
         with open(os.path.join(MODELS_DIR, 'urgency_classifier_ml.pkl'), 'rb') as f:
             urgency_classifier_ml = pickle.load(f)
 
+        _ml_artifacts = {
+            'tfidf': tfidf_vectorizer,
+            'issue_ml': issue_classifier_ml,
+            'urgency_ml': urgency_classifier_ml,
+            'categories': mappings['categories'],
+            'urgency_labels': ['low', 'medium', 'high']
+        }
+        print("ML artifacts loaded.")
+        return _ml_artifacts
+    except Exception as e:
+        print(f"Error loading ML artifacts: {e}")
+        raise e
+
+def load_dl_artifacts() -> Dict[str, Any]:
+    """Load and cache heavy DL models (LSTMs, Tokenizer) lazily"""
+    global _dl_artifacts
+    if _dl_artifacts is not None:
+        return _dl_artifacts
+
+    print("Loading DL models (Lazy Load)...")
+    try:
         # Load DL specific artifacts
         issue_classifier_lstm = keras_load_model(os.path.join(MODELS_DIR, 'issue_classifier_lstm.keras'))
         urgency_classifier_lstm = keras_load_model(os.path.join(MODELS_DIR, 'urgency_classifier_lstm.keras'))
@@ -67,28 +93,27 @@ def load_models() -> Dict[str, Any]:
         with open(os.path.join(MODELS_DIR, 'tokenizer_dl.pkl'), 'rb') as f:
             tokenizer = pickle.load(f)
 
-        # Load mappings
-        with open(os.path.join(DATA_DIR, 'category_mapping.json'), 'r') as f:
-            mappings = json.load(f)
-
-        _models_cache = {
-            'tfidf': tfidf_vectorizer,
-            'issue_ml': issue_classifier_ml,
-            'urgency_ml': urgency_classifier_ml,
+        _dl_artifacts = {
             'issue_lstm': issue_classifier_lstm,
             'urgency_lstm': urgency_classifier_lstm,
-            'tokenizer': tokenizer,
-            'categories': mappings['categories'],
-            'urgency_labels': ['low', 'medium', 'high']
+            'tokenizer': tokenizer
         }
-        print("Models loaded successfully.")
-        return _models_cache
-        
+        print("DL models loaded.")
+        return _dl_artifacts
     except Exception as e:
-        print(f"Error loading models: {e}")
-        # Return empty dict or re-raise depending on strictness. 
-        # Re-raising ensures app fails fast if models are missing.
+        print(f"Error loading DL models: {e}")
         raise e
+
+def load_models() -> Dict[str, Any]:
+    """Deprecated: Use load_ml_artifacts or load_dl_artifacts instead.
+    Provided for backward compatibility while refactoring.
+    """
+    ml = load_ml_artifacts()
+    try:
+        dl = load_dl_artifacts()
+        return {**ml, **dl}
+    except:
+        return ml
 
 def preprocess_text(text: str) -> str:
     """Clean and preprocess text for ML usage"""
@@ -302,7 +327,7 @@ def route_complaint(text: str, model_type: str = 'ML') -> Dict[str, Any]:
     Returns:
         Dictionary with all routing outcome details
     """
-    models = load_models()
+    ml_models = load_ml_artifacts()
     
     # 1. Validation
     is_valid, status, message = validate_complaint(text)
@@ -315,12 +340,15 @@ def route_complaint(text: str, model_type: str = 'ML') -> Dict[str, Any]:
         
     # 2. Prediction
     if model_type == 'DL':
-        res = predict_lstm(text, models)
+        dl_models = load_dl_artifacts()
+        # Merge for the prediction functions
+        combined = {**ml_models, **dl_models}
+        res = predict_lstm(text, combined)
     else:
-        res = predict_ml(text, models)
+        res = predict_ml(text, ml_models)
         
     # 3. Routing Logic
-    categories = models['categories']
+    categories = ml_models['categories']
     issue_confidences = res['issue_confidences']
     
     detected_issues = []
