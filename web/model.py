@@ -10,13 +10,7 @@ from typing import Dict, Any, Tuple, List
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 warnings.filterwarnings('ignore')
 
-import tensorflow as tf
-from tensorflow.keras.models import load_model as keras_load_model
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
+# Note: Heavy imports (Tensorflow, NLTK) moved inside functions for memory efficiency (Zero-RAM strategy)
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +24,7 @@ _dl_artifacts = None
 
 def download_nltk_data():
     """Ensure required NLTK data is available"""
+    import nltk
     try:
         nltk.data.find('tokenizers/punkt')
         nltk.data.find('corpora/stopwords')
@@ -84,6 +79,9 @@ def load_dl_artifacts() -> Dict[str, Any]:
     if _dl_artifacts is not None:
         return _dl_artifacts
 
+    # Lazy imports for Tensorflow/Keras
+    from tensorflow.keras.models import load_model as keras_load_model
+    
     print("Loading DL models (Lazy Load)...")
     try:
         # Load DL specific artifacts
@@ -117,6 +115,10 @@ def load_models() -> Dict[str, Any]:
 
 def preprocess_text(text: str) -> str:
     """Clean and preprocess text for ML usage"""
+    from nltk.tokenize import word_tokenize
+    from nltk.corpus import stopwords
+    from nltk.stem import WordNetLemmatizer
+    
     text = text.lower()
     text = re.sub(r"[^a-zA-Z0-9\s']", '', text)
     tokens = word_tokenize(text)
@@ -287,6 +289,7 @@ def predict_ml(text: str, models: Dict) -> Dict:
 
 def predict_lstm(text: str, models: Dict) -> Dict:
     """Run prediction using Deep Learning (LSTM) models"""
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
     processed = preprocess_text(text)
     sequence = models['tokenizer'].texts_to_sequences([processed])
     padded = pad_sequences(sequence, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')

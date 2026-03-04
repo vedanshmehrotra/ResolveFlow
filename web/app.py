@@ -156,6 +156,11 @@ def assignments_page():
     }
     return render_template('assignments.html', assignments=assignments, active_team=team_filter, all_teams=all_teams, is_student=False, team_issue_map=TEAM_ISSUE_MAP)
 
+@app.route('/health')
+def health_check():
+    """Simple health check for monitoring"""
+    return jsonify({'status': 'healthy', 'timestamp': os.popen('date /t').read().strip() if os.name == 'nt' else os.popen('date').read().strip()})
+
 @app.route('/api/triage/ignore', methods=['POST'])
 def ignore_issue_route():
     """Mark a specific issue as ignored so it leaves the queue"""
@@ -304,8 +309,15 @@ def submit_complaint():
         })
         
     except Exception as e:
-        print(f"Error processing complaint: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        import traceback
+        error_msg = str(e)
+        print(f"Error processing complaint: {error_msg}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False, 
+            'message': f"Model processing failed: {error_msg}. Check logs for details.",
+            'error_type': type(e).__name__
+        }), 500
 
 @app.route('/api/complaints/rate', methods=['POST'])
 @login_required
