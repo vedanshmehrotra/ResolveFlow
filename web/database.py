@@ -281,8 +281,13 @@ def update_assignment_status(assignment_id: int, status: str, notes: Optional[st
                 # Check all assignments for this CID
                 all_assigns = cursor.execute("SELECT status FROM assignments WHERE complaint_id = ?", (cid,)).fetchall()
                 if all(a[0].upper() == 'RESOLVED' for a in all_assigns):
-                    # Auto-resolve parent complaint
-                    update_complaint_status(cid, 'RESOLVED', "Automatically resolved as all assigned tasks are complete.")
+                    # Auto-resolve parent complaint using the SAME connection to avoid deadlocks
+                    time_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    auto_notes = "Automatically resolved as all assigned tasks are complete."
+                    cursor.execute(
+                        "UPDATE complaints SET status = ?, admin_notes = ?, final_status_time = ? WHERE id = ?",
+                        ('RESOLVED', auto_notes, time_now, cid)
+                    )
         
         conn.commit()
         return cursor.rowcount > 0
@@ -472,23 +477,21 @@ def get_dashboard_stats() -> Dict[str, int]:
         # Total complaints
         total = cursor.execute("SELECT COUNT(*) FROM complaints").fetchone()[0]
         
-        # Auto-routed = complaints that have at least one auto-assigned assignment
-        auto_routed = cursor.execute("""
-            SELECT COUNT(DISTINCT complaint_id) FROM assignments 
-            WHERE confidence >= 0.85
-        """).fetchone()[0]
-        
-        # Pending review = decision queue count (issues between 0.30 and 0.85 not yet resolved or fallback)
-        pending = len(get_decision_queue())
-        
-        # Resolved = count of complaints where status is RESOLVED
+        # Use simple counts for the 4 primary cards based on user request:
+        # Total, Sent, In Progress, Resolved
+        sent = cursor.execute("SELECT COUNT(*) FROM complaints WHERE status = 'SENT'").fetchone()[0]
+        in_progress = cursor.execute("SELECT COUNT(*) FROM complaints WHERE status = 'IN_PROGRESS'").fetchone()[0]
         resolved = cursor.execute("SELECT COUNT(*) FROM complaints WHERE status = 'RESOLVED'").fetchone()[0]
+        
+        # Also need pending for the queue indicator but not for the cards
+        pending = len(get_decision_queue())
         
         return {
             'total': total,
-            'auto_routed': auto_routed,
-            'pending_review': pending,
-            'resolved': resolved
+            'sent': sent,
+            'in_progress': in_progress,
+            'resolved': resolved,
+            'pending_review': pending
         }
 
 # Initialize DB on import if it doesn't exist

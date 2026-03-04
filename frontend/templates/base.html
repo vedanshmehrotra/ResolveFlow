@@ -21,7 +21,7 @@
         <!-- Logo Area -->
         <div class="h-[56px] flex items-center px-4 justify-between border-b border-subtle">
             <span class="text-[16px] font-semibold text-primary">ResolveFlow</span>
-            <span class="role-badge">{{ user.role.capitalize() if user else 'User' }}</span>
+            <span class="role-badge">{{ user.role.capitalize() if user.is_authenticated else 'Admin' }}</span>
         </div>
 
         <!-- Navigation -->
@@ -34,13 +34,14 @@
             <div class="flex items-center gap-3">
                 <div
                     class="w-7 h-7 rounded-full bg-elevated flex items-center justify-center text-primary text-[11px] font-semibold border border-subtle">
-                    {% set initials = (user.username or 'GU')[:2] | upper if user else 'GU' %}
+                    {% set initials = (user.username[0:2].upper()) if user.is_authenticated else 'AD' %}
                     {{ initials }}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-[13px] font-medium text-primary truncate">{{ user.username if user and user.username
-                        else 'Guest' }}</p>
-                    <p class="text-[12px] text-muted truncate">{{ user.role.capitalize() if user else 'Guest' }}</p>
+                    <p class="text-[13px] font-medium text-primary truncate">{{ user.username if user.is_authenticated
+                        else 'Admin' }}</p>
+                    <p class="text-[12px] text-muted truncate">{{ user.role.capitalize() if user.is_authenticated else
+                        'Admin' }}</p>
                 </div>
                 <a href="{{ url_for('logout') }}" class="text-muted hover:text-danger transition-colors p-1"
                     title="Logout">

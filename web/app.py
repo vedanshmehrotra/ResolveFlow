@@ -30,6 +30,10 @@ def load_user(user_id):
         return User(user_data)
     return None
 
+@app.context_processor
+def inject_user():
+    return dict(user=current_user)
+
 # Initialize DB on start
 init_db()
 init_assignments_table()
@@ -222,7 +226,8 @@ def submit_complaint():
             'plumbing': ['leak', 'water', 'pipe', 'tap', 'drain', 'flood', 'flush', 'sink', 'shower', 'toilet'],
             'internet': ['wifi', 'router', 'network', 'disconnect', 'slow', 'internet', 'connection'],
             'cleanliness': ['dirty', 'smell', 'garbage', 'clean', 'stain', 'dust', 'mess', 'trash'],
-            'noise': ['loud', 'music', 'shouting', 'noise', 'party', 'bang']
+            'noise': ['loud', 'music', 'shouting', 'noise', 'party', 'bang'],
+            'furniture': ['desk', 'chair', 'bed', 'furniture', 'table', 'wardrobe', 'cupboard', 'shelf', 'broken', 'damaged']
         }
         
         assignments_created = []
@@ -248,14 +253,10 @@ def submit_complaint():
                 
                 print(f"Issue: {issue}, Conf: {conf}, Keyword Found: {has_keyword}")
                 
-                # Multi-Issue Logic:
-                # 1. Auto-Assign: >= 0.85 (Keyword check optional? User prompt didn't specify keyword strictness for this new logic, 
-                #    but said "Confidence >= 85% -> Auto-assign". Let's stick to strict confidence).
-                #    Actually, existing logic used keywords as safety. Let's keep keywords as a booster or safety?
-                #    User Prompt: "Confidence >= 85% -> Auto-assign". Simplifies it.
-                #    Let's trust the ML score per user request to "Minimal Design Rule".
+                # Routing Logic:
+                # 1. Auto-Assign: >= 0.75
                 
-                if conf >= 0.85:
+                if conf >= 0.75:
                     create_assignment(complaint_id, team, issue, conf, sla)
                     assignments_created.append(team)
                     response_assignments.append({
@@ -265,7 +266,7 @@ def submit_complaint():
                         "status": "SENT"
                     })
                 elif conf >= 0.30:
-                    # 2. Manual Review: 30-84%
+                    # 2. Manual Review: 30-74%
                     # Do not create assignment. It will show in Decision Queue.
                     pass
                 else:

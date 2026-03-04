@@ -183,12 +183,12 @@
             <p class="stat-value">{{ stats.total }}</p>
         </div>
         <div class="stat-card">
-            <p class="stat-label">Auto-Routed</p>
-            <p class="stat-value accent">{{ stats.auto_routed }}</p>
+            <p class="stat-label">Sent</p>
+            <p class="stat-value accent">{{ stats.sent }}</p>
         </div>
         <div class="stat-card">
-            <p class="stat-label">Pending Review</p>
-            <p class="stat-value warning">{{ stats.pending_review }}</p>
+            <p class="stat-label">In Progress</p>
+            <p class="stat-value warning">{{ stats.in_progress }}</p>
         </div>
         <div class="stat-card">
             <p class="stat-label">Resolved</p>
@@ -235,7 +235,8 @@
                 </thead>
                 <tbody class="divide-y divide-subtle">
                     {% for c in complaints %}
-                    <tr class="interactive assignment-row" data-status="{{ c.status }}">
+                    <tr class="interactive assignment-row"
+                        data-status="{% if c.review_status == 'REJECTED' %}REJECTED{% else %}{{ c.status }}{% endif %}">
                         <td class="whitespace-nowrap">
                             <p class="font-bold text-primary">#{{ c.id }}</p>
                             <p class="text-[11px] text-muted font-mono mt-0.5">{{ c.timestamp[:10] }}</p>
@@ -266,6 +267,9 @@
                             <span
                                 class="text-[9px] font-bold text-warning uppercase border border-warning/30 px-1 rounded mt-1 inline-block">Manual
                                 Override</span>
+                            {% elif c.review_status == 'REJECTED' %}
+                            <span
+                                class="text-[9px] font-bold text-danger uppercase border border-danger/30 px-1 rounded mt-1 inline-block">Rejected</span>
                             {% endif %}
                         </td>
                         <td class="whitespace-nowrap">
@@ -283,7 +287,12 @@
                                     </span>
                                 </div>
                                 {% else %}
+                                {% if c.review_status == 'REJECTED' %}
+                                <span
+                                    class="status-badge bg-danger/10 text-danger border border-danger/20 text-[10px]">REJECTED</span>
+                                {% else %}
                                 <span class="text-[11px] text-muted italic">Triage Pending</span>
+                                {% endif %}
                                 {% endfor %}
                             </div>
                         </td>
@@ -314,12 +323,12 @@
 
         function filterTable() {
             const searchTerm = searchInput.value.toLowerCase();
-            const filterValue = statusFilter.value;
+            const filterValue = statusFilter.value; // ALL, SENT, IN_PROGRESS, RESOLVED
             let visibleCount = 0;
 
             rows.forEach(row => {
                 const text = row.textContent.toLowerCase();
-                const status = row.dataset.status;
+                const status = (row.dataset.status || '').toUpperCase();
 
                 const matchesSearch = text.includes(searchTerm);
                 const matchesStatus = filterValue === 'ALL' || status === filterValue;

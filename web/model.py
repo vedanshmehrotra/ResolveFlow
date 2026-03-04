@@ -19,8 +19,9 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
 # --- CONFIGURATION ---
-MODELS_DIR = 'models'
-DATA_DIR = 'data'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODELS_DIR = os.path.join(BASE_DIR, 'models')
+DATA_DIR = os.path.join(BASE_DIR, 'data')
 MAX_SEQUENCE_LENGTH = 100
 
 # Global models cache
@@ -169,6 +170,12 @@ def get_keyword_fallbacks(text_lower: str, categories: List[str]) -> np.ndarray:
     if any(kw in text_lower for kw in clean_keywords):
         if 'cleanliness_issue' in categories:
             fallback_issues[categories.index('cleanliness_issue')] = 0.75
+            
+    # Furniture
+    furniture_keywords = ['desk', 'chair', 'bed', 'furniture', 'table', 'wardrobe', 'cupboard', 'shelf', 'broken', 'damaged']
+    if any(kw in text_lower for kw in furniture_keywords):
+        if 'furniture_issue' in categories:
+            fallback_issues[categories.index('furniture_issue')] = 0.8
             
     return fallback_issues
 

@@ -186,95 +186,91 @@
     </div>
 </div>
 <div id="assignments-list">
-    {% set ns = namespace(current_team=None) %}
-    {% for a in assignments|sort(attribute='team') %}
-    {% if a.team != ns.current_team %}
-    {% if ns.current_team is not none %}</div>{% endif %}
-{% set ns.current_team = a.team %}
-{% set team_count = assignments|selectattr('team', 'equalto', a.team)|list|length %}
-<div class="team-group">
-    <div class="team-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:3px; height:14px; background:var(--accent); border-radius:2px;"></div>
-            <span class="team-header-name">{{ a.team }} (<span class="team-count">{{ team_count }}</span>)</span>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="assignment-card assignment-row {% if a.status == 'RESOLVED' %}resolved{% endif %}" data-id="{{ a.id }}"
-        data-status="{{ a.status }}">
-
-        <div class="priority-indicator 
-                {% if 'P1' in (a.sla_class or '') %}bg-danger
-                {% elif 'P2' in (a.sla_class or '') %}bg-warning
-                {% else %}bg-success{% endif %}"></div>
-
-        <div class="w-24 shrink-0">
-            <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">
-                REQ-{{ a.complaint_id }}
-            </div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Room {{ a.room_number or '—' }}
-            </div>
-            <div
-                style="font-size: 10px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; color: {% if 'P1' in (a.sla_class or '') %}var(--danger){% elif 'P2' in (a.sla_class or '') %}var(--warning){% else %}var(--success){% endif %};">
-                {{ a.sla_class or 'P3' }} Priority
+    {% for team, team_assignments in assignments|groupby('team') %}
+    <div class="team-group">
+        <div class="team-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:3px; height:14px; background:var(--accent); border-radius:2px;"></div>
+                <span class="team-header-name">{{ team }} (<span class="team-count">{{ team_assignments|length
+                        }}</span>)</span>
             </div>
         </div>
 
-        <div class="flex-1">
-            <p class="text-[14px] font-medium text-primary mb-1">{{ team_issue_map.get(a.team, a.team) }}</p>
-            <div class="assignment-notes mt-2">
-                <button onclick="toggleNote(this)" class="note-toggle-btn text-xs font-medium" style="color: var(--accent); background: none; border: none;
-                       cursor: pointer; padding: 0; font-family: 'Inter', sans-serif;">
-                    + Add Note
-                </button>
-                <div class="note-field hidden mt-2">
-                    <textarea data-assignment-id="{{ a.id }}" placeholder="Add a note for this ticket..." rows="2"
-                        style="width: 100%; font-size: 12px; padding: 8px 10px;
-                         border-radius: var(--radius-sm);
-                         border: 1px solid var(--border-default);
-                         background: var(--bg-surface);
-                         color: var(--text-primary);
-                         font-family: 'Inter', sans-serif;
-                         resize: none; outline: none;
-                         transition: border-color 150ms ease;
-                         box-sizing: border-box;" onfocus="this.style.borderColor='var(--accent)'"
-                        onblur="this.style.borderColor='var(--border-default)'">{{ a.notes or '' }}</textarea>
-                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
-                        <button onclick="saveNote(this)" style="font-size: 12px; font-weight: 600; padding: 4px 14px;
-                           background: var(--accent); color: white; border: none;
-                           border-radius: var(--radius-sm); cursor: pointer;
-                           font-family: 'Inter', sans-serif;
-                           transition: background 150ms ease;"
-                            onmouseover="this.style.background='var(--accent-hover)'"
-                            onmouseout="this.style.background='var(--accent)'">Save</button>
-                        <span class="note-save-status"
-                            style="font-size: 11px; color: var(--text-muted); display: none;">Saved</span>
+        {% for a in team_assignments %}
+        <div class="assignment-card assignment-row {% if a.status == 'RESOLVED' %}resolved{% endif %}"
+            data-id="{{ a.id }}" data-status="{{ a.status }}">
+
+            <div class="priority-indicator 
+                    {% if 'P1' in (a.sla_class or '') %}bg-danger
+                    {% elif 'P2' in (a.sla_class or '') %}bg-warning
+                    {% else %}bg-success{% endif %}"></div>
+
+            <div class="w-24 shrink-0">
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">
+                    REQ-{{ a.complaint_id }}
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    Room {{ a.room_number or '—' }}
+                </div>
+                <div
+                    style="font-size: 10px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; color: {% if 'P1' in (a.sla_class or '') %}var(--danger){% elif 'P2' in (a.sla_class or '') %}var(--warning){% else %}var(--success){% endif %};">
+                    {{ a.sla_class or 'P3' }} Priority
+                </div>
+            </div>
+
+            <div class="flex-1">
+                <p class="text-[14px] font-medium text-primary mb-1">{{ team_issue_map.get(a.team, a.team) }}</p>
+                <div class="assignment-notes mt-2">
+                    <button onclick="toggleNote(this)" class="note-toggle-btn text-xs font-medium" style="color: var(--accent); background: none; border: none;
+                           cursor: pointer; padding: 0; font-family: 'Inter', sans-serif;">
+                        + Add Note
+                    </button>
+                    <div class="note-field hidden mt-2">
+                        <textarea data-assignment-id="{{ a.id }}" placeholder="Add a note for this ticket..." rows="2"
+                            style="width: 100%; font-size: 12px; padding: 8px 10px;
+                             border-radius: var(--radius-sm);
+                             border: 1px solid var(--border-default);
+                             background: var(--bg-surface);
+                             color: var(--text-primary);
+                             font-family: 'Inter', sans-serif;
+                             resize: none; outline: none;
+                             transition: border-color 150ms ease;
+                             box-sizing: border-box;" onfocus="this.style.borderColor='var(--accent)'"
+                            onblur="this.style.borderColor='var(--border-default)'">{{ a.notes or '' }}</textarea>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+                            <button onclick="saveNote(this)" style="font-size: 12px; font-weight: 600; padding: 4px 14px;
+                               background: var(--accent); color: white; border: none;
+                               border-radius: var(--radius-sm); cursor: pointer;
+                               font-family: 'Inter', sans-serif;
+                               transition: background 150ms ease;"
+                                onmouseover="this.style.background='var(--accent-hover)'"
+                                onmouseout="this.style.background='var(--accent)'">Save</button>
+                            <span class="note-save-status"
+                                style="font-size: 11px; color: var(--text-muted); display: none;">Saved</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="flex items-center gap-6">
-            <select class="status-select" data-assignment-id="{{ a.id }}" onchange="updateStatus(this)">
-                <option value="SENT" {% if a.status=='SENT' %}selected{% endif %}>Sent</option>
-                <option value="IN_PROGRESS" {% if a.status=='IN_PROGRESS' %}selected{% endif %}>In Progress</option>
-                <option value="RESOLVED" {% if a.status=='RESOLVED' %}selected{% endif %}>Resolved</option>
-            </select>
+            <div class="flex items-center gap-6">
+                <select class="status-select" data-assignment-id="{{ a.id }}" onchange="updateStatus(this)">
+                    <option value="SENT" {% if a.status=='SENT' %}selected{% endif %}>Sent</option>
+                    <option value="IN_PROGRESS" {% if a.status=='IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                    <option value="RESOLVED" {% if a.status=='RESOLVED' %}selected{% endif %}>Resolved</option>
+                </select>
+            </div>
         </div>
+        {% endfor %}
     </div>
-</div>
-{% endfor %}
-{% if ns.current_team is not none %}</div>{% endif %}
+    {% endfor %}
 
-{% if not assignments %}
-<div class="py-32 flex flex-col items-center justify-center text-center">
-    <div class="text-4xl mb-4">✅</div>
-    <p class="text-secondary font-bold">No tasks assigned</p>
-    <p class="text-muted text-sm mt-1">Excellent! All teams have clear boards.</p>
-</div>
-{% endif %}
+    {% if not assignments %}
+    <div class="py-32 flex flex-col items-center justify-center text-center">
+        <div class="text-4xl mb-4">✅</div>
+        <p class="text-secondary font-bold">No tasks assigned</p>
+        <p class="text-muted text-sm mt-1">Excellent! All teams have clear boards.</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
